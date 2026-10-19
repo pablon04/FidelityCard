@@ -1,0 +1,2 @@
+-- Datos de demo para entorno local (supabase db reset).
+-- TODO(T2/T3): comercio demo + tarjeta activa cuando exista el flujo de alta.

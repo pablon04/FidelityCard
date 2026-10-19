@@ -1,0 +1,69 @@
+/* Tokens de UX.md 4.1-4.3. Los ratios de contraste hay que verificarlos (AC-A11). */
+:root {
+  --bg: #ffffff;
+  --bg-muted: #f4f5f7;
+  --surface: #ffffff;
+  --border: #6b7280;
+  --border-subtle: #e5e7eb;
+  --text: #111827;
+  --text-muted: #4b5563;
+
+  --primary: #4338ca;
+  --primary-hover: #3730a3;
+  --on-primary: #ffffff;
+
+  --success: #047857;
+  --success-bg: #ecfdf5;
+  --danger: #b91c1c;
+  --danger-bg: #fef2f2;
+  --warning: #92400e;
+  --warning-bg: #fffbeb;
+  --focus-ring: #1d4ed8;
+
+  /* Color del comercio: valores por defecto; se sobrescriben por estilo en linea. */
+  --brand: #1f2937;
+  --on-brand: #ffffff;
+  --brand-ui: #1f2937;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0b0f19;
+    --bg-muted: #131a2a;
+    --surface: #161e30;
+    --border: #9ca3af;
+    --border-subtle: #2a3448;
+    --text: #f3f4f6;
+    --text-muted: #b6bdcb;
+    --primary: #a5b4fc;
+    --primary-hover: #c7d2fe;
+    --on-primary: #0b0f19;
+    --success: #6ee7b7;
+    --success-bg: #06281d;
+    --danger: #fca5a5;
+    --danger-bg: #2b0f0f;
+    --warning: #fcd34d;
+    --warning-bg: #2a1d05;
+    --focus-ring: #93c5fd;
+  }
+}
+
+[data-theme='dark'] {
+  --bg: #0b0f19;
+  --bg-muted: #131a2a;
+  --surface: #161e30;
+  --border: #9ca3af;
+  --border-subtle: #2a3448;
+  --text: #f3f4f6;
+  --text-muted: #b6bdcb;
+  --primary: #a5b4fc;
+  --primary-hover: #c7d2fe;
+  --on-primary: #0b0f19;
+  --success: #6ee7b7;
+  --success-bg: #06281d;
+  --danger: #fca5a5;
+  --danger-bg: #2b0f0f;
+  --warning: #fcd34d;
+  --warning-bg: #2a1d05;
+  --focus-ring: #93c5fd;
+}
