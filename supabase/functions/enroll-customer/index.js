@@ -73,12 +73,12 @@ export async function handle(req) {
       token: input.captcha_token,
       ip,
     })
-    if (captcha === 'failed') {
+    if (captcha.result === 'failed') {
       log(requestId, 'captcha_failed', { slug: input.slug })
       return fail(403, 'captcha_failed')
     }
-    if (captcha === 'unavailable') {
-      log(requestId, 'captcha_unavailable')
+    if (captcha.result === 'unavailable') {
+      log(requestId, 'captcha_unavailable', { reason: captcha.reason, has_ip: ip !== null })
       return fail(503, 'captcha_unavailable')
     }
 
