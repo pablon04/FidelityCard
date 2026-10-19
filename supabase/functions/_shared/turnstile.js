@@ -4,7 +4,7 @@
 // Devuelve { result, reason }; `reason` es diagnostico SIN secretos ni token:
 //   ok | rejected | no_secret | http_<status> | timeout | fetch_error:<name> | bad_json
 export const TURNSTILE_TEST_SECRET_PASS = '1x0000000000000000000000000000000AA'
-const VERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v1/siteverify'
+const VERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify'
 
 const IPV4 = /^(\d{1,3}\.){3}\d{1,3}$/
 const IPV6 = /^[0-9a-fA-F:.]{2,45}$/
