@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "fidelitycard-wallet-512207",
+  "private_key_id": "92d63ca82d5d0497bff2c63866087d14511f6353",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQDdWy8sHUIBXGXo\n66OJtzGKNTsp+iypxzN+jWrLnGKXaByzRpbjeDkil6/ALKBG5WD4QDmp2u5QWJnb\nRMOiWwnbXe6pJCJ0tS4F9fHMGSXpFfT0JXJcpj7ptFacvJWzGXT7eS+iMezz/pLY\n/ozTTtIo5B07V3/8tNwWBwNUqAUQ+qJtgJCqrLKZRpSotAcwc+ASk3kn1tLh1N3Y\nG8ZuNo/zpI94JUCoA9qo3aj5YjEAIgMSlEGWtoA2UYR+s+EzyozdEEwfjTmj1JVj\nq+bWRMjgY59urF4QvQ52px2hJ2uPzM3BgN6c3l42vkqHJAxGptjL4R6fC4pjoV56\nU+PgJienAgMBAAECggEAL0tkvE2yBR1rTsVOB0YjaQ6viewAb/P2TiND/qX2sLfX\nbfx2j7pnprr3G53NTuiCe/go+eAji/oqQV2jWQSPihW7QNtOG1Z8s1xVodB7t53v\n3NxFX4NLrN5RpSJr77zQMEy3vzVglc8+K+vTRfCw2XjHwB6VY3Z3EaPE8+kEUBh/\nIWRWuwazR0+YNm7pCVHQ2tX6X80Jxp6zfKqqsXSBsqHTryYe73dFHoOzIw0PjOTu\njSvIjuwyY/atlQ7ueR1ztgYaCWIWQW/mytNso81DjS/08ebBvVifzz8KONhC0Rd6\nsQ2pwZsIrEZJQREBmfJ9zWEM35keI/1ZSemyR+panQKBgQD3IFmRPx1Nlk/sz+tQ\nmaRv1bVNCNBXlhq0CsSY9MBNHQkA5rd6wViIqv34b8WtBDuu38eylIqXZAIGW3jg\n49FjcKVOa6dC6jJ56admU35D9CmTXRerTBLpk8CJON4KmXXshLNlNlNiUXFfSIgt\nx0Vq+it+m4et3enB6S0hvxU/rQKBgQDlTfK8MFziPKyjg2vIuvBqsgZcywmPkXKf\nQpebiFcYihFV90+yZrc60EDUpAtQgrSoDuLeP/+DkgTfP+pWpoFn4szbGnzttiEX\n0OROpoT4XkEVXi49qtDTr+w/c3ByBcFVVvCnM8tvA8ApbQXzMbS1ylgmwwYel9gv\nkkaqsrqfIwKBgGUI2tWhQi+4ZpDhKMnZJvt6GheWpOdKPTyismH+nqhoWIf/y7/q\nUHH/xrnNqLnl4yjJ4PFH/amLf7BtsWvweGj5Yvw+0zFuYpipSIFzXUoXBvByvPyR\nq6HHgI4Zq94Vg7rhPh8BKPInbfyQwOxGbkEgaqvmloAlHC7lUEhdwSg5AoGAYTAN\nfqe85oKy5Ubxaw2YkpBL1A6WScxq2Yd+/IPn7lWujVIZ7FJOvNXBdJ7m0MPlUAmn\nLG3RnXFJMVpEt18xH9fn3cG3S4VTN2XpLlCzsRU53pWhYa/BfMdmiWojMaCw1bvY\nmfWA9tePHb/AstfRcO+HNz6XnGXdUiRcYUMJiCMCgYAjqOgqIwFVYiGOQCd4Wqg0\ndXbDJNFx8ec1jxCESsOLrkn7UG5OOpuwdEo08wNU9CAo8AM9b3gSkzZbWxxgyFLT\ny1clUr7v5IlaytXxwiQkiETvvHBB1fDoWun5Zf8m8dVoP4WosEgCS0TeAtR+DutA\nhTDilCbtf95Q23em2yljDw==\n-----END PRIVATE KEY-----\n",
+  "client_email": "wallet-issuer@fidelitycard-wallet-512207.iam.gserviceaccount.com",
+  "client_id": "104963349923702363889",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/wallet-issuer%40fidelitycard-wallet-512207.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
