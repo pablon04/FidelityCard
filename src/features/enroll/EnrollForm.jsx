@@ -3,7 +3,7 @@ import { Alert } from '../../components/ui/Alert.jsx'
 import { Button } from '../../components/ui/Button.jsx'
 import { Checkbox } from '../../components/ui/Checkbox.jsx'
 import { TextField } from '../../components/ui/TextField.jsx'
-import { normalizePhone } from '../../lib/phone.js'
+import { normalizePhone, stripSpanishPrefix } from '../../lib/phone.js'
 import { suggestEmail } from '../../lib/format.js'
 import { enrollCustomer, ApiError } from '../../services/publicApi.js'
 import { es } from '../../i18n/es.js'
@@ -191,7 +191,7 @@ export function EnrollForm({ merchant, slug, source, onDone, onOpenPrivacy, onRe
             </span>
           }
           value={f.phone}
-          onChange={(e) => set('phone', e.target.value)}
+          onChange={(e) => set('phone', stripSpanishPrefix(e.target.value))}
           onBlur={() => onBlur('phone')}
           error={errors.phone}
           {...ro}

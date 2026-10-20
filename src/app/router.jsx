@@ -12,6 +12,7 @@ const PanelHome = lazy(() => import('../features/panel/PanelHome.jsx'))
 const PanelLayout = lazy(() => import('../features/panel/PanelLayout.jsx'))
 const OnboardingPage = lazy(() => import('../features/merchant/OnboardingPage.jsx'))
 const CardConfigPage = lazy(() => import('../features/card-config/CardConfigPage.jsx'))
+const ClientsPage = lazy(() => import('../features/clients/ClientsPage.jsx'))
 const SharePage = lazy(() => import('../features/share/SharePage.jsx'))
 
 const lz = (el) => <Suspense fallback={null}>{el}</Suspense>
@@ -36,6 +37,7 @@ export const router = createBrowserRouter([
             children: [
               { path: 'card', element: lz(<CardConfigPage />) },
               { path: 'share', element: lz(<SharePage />) },
+              { path: 'clientes', element: lz(<ClientsPage />) },
             ],
           },
         ],

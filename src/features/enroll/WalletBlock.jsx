@@ -1,6 +1,6 @@
-import { Suspense, lazy, useState } from 'react'
+import { Suspense, lazy } from 'react'
 import { Link } from 'react-router'
-import { Button } from '../../components/ui/Button.jsx'
+import { GoogleWalletButton } from './GoogleWalletButton.jsx'
 import { detectPlatform } from '../../lib/platform.js'
 import { env, publicBase } from '../../lib/env.js'
 
@@ -12,15 +12,10 @@ const QrImage = lazy(() => import('../../components/ui/QrImage.jsx'))
  */
 export function WalletBlock({ token, merchantName }) {
   const platform = detectPlatform()
-  const [googleError, setGoogleError] = useState(false)
   const passPath = `/p/${token}`
   const showGoogle = env.googleWalletEnabled
-  // env.appleWalletEnabled: sin boton hasta Fase D.
-
-  const openGoogle = async () => {
-    // Fase 4: GET wallet-google?t=<token>&redirect=1. Hoy el flag esta apagado.
-    setGoogleError(true)
-  }
+  const android = platform === 'android'
+  // Apple Wallet: sin boton (aparcado); en iOS solo texto informativo.
 
   return (
     <div className="space-y-3">
@@ -38,28 +33,23 @@ export function WalletBlock({ token, merchantName }) {
           <p className="text-sm text-text-muted">Escanea este código con tu cámara.</p>
         </div>
       )}
-      {showGoogle && platform === 'android' && (
-        <Button size="lg" onClick={openGoogle}>
-          Añadir a Google Wallet
-        </Button>
-      )}
-      {googleError && (
-        <p role="alert" className="text-sm text-danger">
-          No hemos podido abrir tu Wallet. Usa el enlace de abajo para ver tu tarjeta.
-        </p>
-      )}
+      {showGoogle && android && <GoogleWalletButton token={token} />}
       <Link
         to={passPath}
         className={`flex min-h-[52px] w-full items-center justify-center rounded-control px-5 text-lg font-semibold ${
-          showGoogle && platform === 'android'
+          showGoogle && android
             ? 'border-[1.5px] border-border text-text'
             : 'bg-primary text-on-primary hover:bg-primary-hover'
         }`}
       >
         Guardar tarjeta
       </Link>
+      {showGoogle && !android && <GoogleWalletButton token={token} primary={false} />}
+      {platform === 'ios' && (
+        <p className="text-center text-sm text-text-muted">Apple Wallet llegará pronto.</p>
+      )}
       <p className="text-center text-sm text-text-muted">
-        {showGoogle && platform === 'android'
+        {showGoogle && android
           ? 'Cuando la veas en Wallet, ya puedes cerrar esta página.'
           : 'Tu tarjeta está lista. Guarda este enlace para tenerla siempre a mano.'}
       </p>

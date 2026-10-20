@@ -86,3 +86,33 @@ export async function enrollCustomer(payload) {
     return { status: body.status, passToken: body.pass_token }
   throw new ApiError('server', { status: res.status })
 }
+
+/**
+ * Google Wallet: Edge Function google-wallet-link. POST {pass_token} -> 200 {save_url}.
+ * Errores {error:{code}}: wallet_disabled(503), invalid_token(400), not_found(404),
+ * rate_limited(429, retry_after), internal(500).
+ */
+export async function getGoogleSaveUrl(passToken) {
+  const res = await request(`${env.supabaseUrl}/functions/v1/google-wallet-link`, {
+    method: 'POST',
+    headers: baseHeaders(),
+    body: JSON.stringify({ pass_token: passToken }),
+  })
+  let body = null
+  try {
+    body = await res.json()
+  } catch {
+    /* no JSON */
+  }
+  if (
+    res.ok &&
+    typeof body?.save_url === 'string' &&
+    body.save_url.startsWith('https://pay.google.com/')
+  )
+    return body.save_url
+  const err = body?.error ?? {}
+  throw new ApiError(err.code || 'internal', {
+    status: res.status,
+    retryAfter: (err.retry_after ?? Number(res.headers.get('retry-after'))) || undefined,
+  })
+}

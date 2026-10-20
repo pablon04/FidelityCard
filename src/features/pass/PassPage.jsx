@@ -6,6 +6,8 @@ import { PassCard } from '../../components/ui/PassCard.jsx'
 import { Skeleton } from '../../components/ui/Skeleton.jsx'
 import { env } from '../../lib/env.js'
 import { logoUrl } from '../../lib/format.js'
+import { GoogleWalletButton } from '../enroll/GoogleWalletButton.jsx'
+import { detectPlatform } from '../../lib/platform.js'
 import { getPublicPass } from '../../services/publicApi.js'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -78,6 +80,14 @@ function PassView({ pass }) {
         <Alert tone="warning" className="mt-4 w-full max-w-sm">
           Esta tarjeta está bloqueada. Consulta con el comercio.
         </Alert>
+      )}
+      {env.googleWalletEnabled && !blocked && (
+        <div className="mt-4 w-full max-w-sm space-y-2">
+          <GoogleWalletButton token={pass.token} primary={detectPlatform() === 'android'} />
+          {detectPlatform() === 'ios' && (
+            <p className="text-center text-sm text-text-muted">Apple Wallet llegará pronto.</p>
+          )}
+        </div>
       )}
       <p className="mt-4 max-w-sm text-center text-sm text-text-muted">
         Enseña este código en caja. Guarda este enlace o añade la página a tu pantalla de inicio

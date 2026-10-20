@@ -11,6 +11,9 @@ const MESSAGES = {
   origin_not_allowed: 'Origen no permitido.',
   method_not_allowed: 'Metodo no permitido.',
   payload_too_large: 'Peticion demasiado grande.',
+  wallet_disabled: 'Google Wallet no esta disponible ahora mismo.',
+  invalid_token: 'Enlace de pase no valido.',
+  not_found: 'No encontramos este pase.',
   internal: 'Error interno. Intentalo mas tarde.',
 }
 

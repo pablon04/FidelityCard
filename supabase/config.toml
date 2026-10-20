@@ -425,3 +425,8 @@ enabled = true
 enabled = true
 verify_jwt = false
 entrypoint = "./functions/enroll-customer/index.js"
+
+[functions.google-wallet-link]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/google-wallet-link/index.js"

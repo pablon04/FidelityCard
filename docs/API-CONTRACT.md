@@ -48,6 +48,25 @@ Errores: `{ "error": { "code", "message", "fields"?: {campo: msg}, "retry_after"
 | 503 | `captcha_unavailable` | Turnstile no responde / mal configurado |
 | 500 | `internal` | sin detalles |
 
+## 1b. Edge Function `POST {SUPABASE_URL}/functions/v1/google-wallet-link`
+
+Publica (`verify_jwt=false`), mismo CORS que enroll-customer. Pasos de puesta en marcha: `docs/GOOGLE-WALLET-SETUP.md`.
+
+Request: `{ "pass_token": "<uuid = pass_token / customer_cards.public_id>" }`
+Response 200: `{ "save_url": "https://pay.google.com/gp/v/save/<jwt>" }` (abrir en el movil Android; en modo demo solo funciona para usuarios de prueba).
+Errores `{ "error": { "code", "message", "retry_after"? } }`:
+
+| HTTP | code | Cuando |
+|---|---|---|
+| 503 | `wallet_disabled` | `GOOGLE_WALLET_ENABLED` != `true` (mostrar solo el pase web) |
+| 400 | `invalid_token` | body no JSON o `pass_token` no es uuid |
+| 404 | `not_found` | token inexistente o tarjeta bloqueada |
+| 429 | `rate_limited` | `retry_after` en segundos (60/h por IP, 10/h por IP+token) |
+| 500 | `internal` | fallo de BD o de Google (detalle solo en logs) |
+| 403/405 | `origin_not_allowed` / `method_not_allowed` | |
+
+Idempotente: crea la clase del comercio y el objeto del cliente si no existen (409 = actualiza). Contenido: comercio, color, logo (bucket publico o `GOOGLE_WALLET_FALLBACK_LOGO_URL`, por defecto `<PUBLIC_BASE_URL>/wallet-logo.png`: el front debe publicar ese fichero), titular, progreso `X/Y`, recompensa y QR con `<PUBLIC_BASE_URL>/p/<token>`.
+
 ## 2. RPC publicas (rol `anon`) - `supabase.rpc(...)`
 
 ### `get_public_merchant(p_slug text)` -> jsonb | `null`

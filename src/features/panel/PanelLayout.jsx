@@ -76,12 +76,9 @@ export default function PanelLayout() {
           <NavLink to="/app/share" className={linkCls}>
             Compartir
           </NavLink>
-          <span
-            className="flex min-h-[44px] items-center px-3 text-text-muted"
-            aria-disabled="true"
-          >
-            Clientes <span className="ml-2 text-xs">(Próximamente)</span>
-          </span>
+          <NavLink to="/app/clientes" className={linkCls}>
+            Clientes
+          </NavLink>
         </nav>
         <div className="mt-auto space-y-3">
           {themeSelect}
@@ -110,7 +107,7 @@ export default function PanelLayout() {
       </div>
       <nav
         aria-label="Principal"
-        className="fixed inset-x-0 bottom-0 grid grid-cols-2 border-t border-border-subtle bg-surface md:hidden"
+        className="fixed inset-x-0 bottom-0 grid grid-cols-3 border-t border-border-subtle bg-surface md:hidden"
       >
         <NavLink
           to="/app/card"
@@ -123,6 +120,12 @@ export default function PanelLayout() {
           className={({ isActive }) => `${linkCls({ isActive })} justify-center rounded-none`}
         >
           Compartir
+        </NavLink>
+        <NavLink
+          to="/app/clientes"
+          className={({ isActive }) => `${linkCls({ isActive })} justify-center rounded-none`}
+        >
+          Clientes
         </NavLink>
       </nav>
     </div>
