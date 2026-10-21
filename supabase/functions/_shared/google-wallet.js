@@ -124,6 +124,19 @@ export function loyaltyUpdate(p) {
   }
 }
 
+/** Motivo de un fallo de Google + su mensaje (texto de error de la API, sin datos personales). */
+async function googleFailure(res) {
+  let detail
+  try {
+    detail = String(JSON.parse(await res.text())?.error?.message ?? '').slice(0, 300)
+  } catch {
+    /* cuerpo no JSON */
+  }
+  return detail
+    ? { ok: false, reason: `google_http_${res.status}`, detail }
+    : { ok: false, reason: `google_http_${res.status}` }
+}
+
 /**
  * Actualiza saldo/estado del pase ya guardado en Wallet (PATCH). Best effort: el llamador
  * no debe fallar si esto falla. 404 = el cliente aun no guardo el pase en Wallet (normal).
@@ -137,7 +150,7 @@ export async function patchLoyaltyObject({ id, update, token, fetchImpl, timeout
       body: JSON.stringify(update),
       signal: AbortSignal.timeout(timeoutMs),
     })
-    return res.ok ? { ok: true } : { ok: false, reason: `google_http_${res.status}` }
+    return res.ok ? { ok: true } : await googleFailure(res)
   } catch (e) {
     return { ok: false, reason: `fetch_error:${String(e?.name ?? 'unknown').slice(0, 40)}` }
   }
@@ -157,7 +170,7 @@ export async function patchLoyaltyClass({ cls, token, fetchImpl, timeoutMs = 500
       body: JSON.stringify(update),
       signal: AbortSignal.timeout(timeoutMs),
     })
-    return res.ok ? { ok: true } : { ok: false, reason: `google_http_${res.status}` }
+    return res.ok ? { ok: true } : await googleFailure(res)
   } catch (e) {
     return { ok: false, reason: `fetch_error:${String(e?.name ?? 'unknown').slice(0, 40)}` }
   }
