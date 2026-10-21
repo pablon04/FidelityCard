@@ -98,10 +98,13 @@ export function buildLoyaltyObject(p) {
 
 /**
  * Campos del objeto que cambian con cada visita/canje (saldo y estado). Se usan en PATCH.
- * @param {{type:'visits'|'points', balance:number, threshold:number, reward:string}} p
+ * @param {{type:'visits'|'points', balance:number, threshold:number, reward:string, earned?:boolean}} p
  */
 export function loyaltyUpdate(p) {
-  const ready = p.balance >= p.threshold
+  const left = p.threshold - p.balance
+  let status =
+    left === 1 ? 'Te falta 1 visita para tu premio.' : `Te faltan ${left} visitas para tu premio.`
+  if (p.earned) status = '¡Premio conseguido en tu última visita! Se te ha reiniciado la tarjeta.'
   return {
     loyaltyPoints: {
       label: p.type === 'visits' ? 'Visitas' : 'Puntos',
@@ -109,13 +112,7 @@ export function loyaltyUpdate(p) {
     },
     textModulesData: [
       { id: 'reward', header: 'Recompensa', body: p.reward },
-      {
-        id: 'status',
-        header: 'Estado',
-        body: ready
-          ? '¡Premio disponible! Canjéalo en caja.'
-          : `Te faltan ${p.threshold - p.balance} para tu premio.`,
-      },
+      { id: 'status', header: 'Estado', body: status },
     ],
   }
 }

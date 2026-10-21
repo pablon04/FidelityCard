@@ -39,7 +39,8 @@ export async function checkRateLimits(supabase, rules) {
       p_max: r.max,
     })
     if (error || !data) return { error: true }
-    if (data.allowed !== true) return { allowed: false, retry_after: Number(data.retry_after) || r.window }
+    if (data.allowed !== true)
+      return { allowed: false, retry_after: Number(data.retry_after) || r.window }
   }
   return { allowed: true }
 }

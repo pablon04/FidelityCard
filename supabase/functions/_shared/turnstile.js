@@ -46,7 +46,10 @@ export async function verifyTurnstile({ secret, token, ip, fetchImpl, timeoutMs 
       : { result: 'failed', reason: 'rejected' }
   } catch (e) {
     if (e?.name === 'AbortError') return { result: 'unavailable', reason: 'timeout' }
-    return { result: 'unavailable', reason: `fetch_error:${String(e?.name ?? 'unknown').slice(0, 40)}` }
+    return {
+      result: 'unavailable',
+      reason: `fetch_error:${String(e?.name ?? 'unknown').slice(0, 40)}`,
+    }
   } finally {
     clearTimeout(t)
   }

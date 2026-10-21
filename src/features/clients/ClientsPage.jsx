@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { Link, useNavigate } from 'react-router'
 import { Alert } from '../../components/ui/Alert.jsx'
 import { Button } from '../../components/ui/Button.jsx'
 import { Skeleton } from '../../components/ui/Skeleton.jsx'
@@ -16,6 +17,7 @@ const fmtVisit = (iso) => (iso ? fmtDate(iso) : 'Nunca')
 
 export default function ClientsPage() {
   const { merchant, program } = useMerchant()
+  const navigate = useNavigate()
   const [input, setInput] = useState('')
   const [search, setSearch] = useState('')
   const [asc, setAsc] = useState(false)
@@ -241,8 +243,20 @@ export default function ClientsPage() {
               </thead>
               <tbody>
                 {rows.map((c) => (
-                  <tr key={c.id} className="border-b border-border-subtle">
-                    <td className="py-2 pr-3 font-medium">{c.name}</td>
+                  <tr
+                    key={c.id}
+                    onClick={() => navigate(`/app/clientes/${c.id}`)}
+                    className="cursor-pointer border-b border-border-subtle hover:bg-bg-muted"
+                  >
+                    <td className="py-2 pr-3 font-medium">
+                      <Link
+                        to={`/app/clientes/${c.id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-primary underline-offset-2 hover:underline"
+                      >
+                        {c.name}
+                      </Link>
+                    </td>
                     <td className="break-all py-2 pr-3">{c.email}</td>
                     <td className="whitespace-nowrap py-2 pr-3">{c.phone}</td>
                     <td className="whitespace-nowrap py-2 pr-3">{fmtDate(c.createdAt)}</td>
@@ -256,7 +270,12 @@ export default function ClientsPage() {
             <ul className="space-y-3 md:hidden">
               {rows.map((c) => (
                 <li key={c.id} className="rounded-card border border-border-subtle p-3">
-                  <p className="font-semibold">{c.name}</p>
+                  <Link
+                    to={`/app/clientes/${c.id}`}
+                    className="inline-flex min-h-[44px] items-center font-semibold text-primary"
+                  >
+                    {c.name}
+                  </Link>
                   <p className="break-all text-sm">{c.email}</p>
                   <p className="text-sm">{c.phone}</p>
                   <p className="mt-1 text-sm text-text-muted">

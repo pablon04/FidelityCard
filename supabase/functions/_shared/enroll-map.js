@@ -44,7 +44,10 @@ export const ALREADY_REGISTERED_MESSAGE =
 export function mapRpcSuccess(data, env) {
   if (!data || typeof data !== 'object') return null
   if (data.status === 'already_registered') {
-    return { status: 200, body: { status: 'already_registered', message: ALREADY_REGISTERED_MESSAGE } }
+    return {
+      status: 200,
+      body: { status: 'already_registered', message: ALREADY_REGISTERED_MESSAGE },
+    }
   }
   if ((data.status !== 'created' && data.status !== 'existing') || !data.card_public_id) return null
   const token = String(data.card_public_id)

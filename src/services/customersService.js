@@ -86,3 +86,44 @@ export async function listAllCustomers(merchantId, opts) {
     if (data.length < 1000) return out
   }
 }
+
+/**
+ * Ficha de un cliente: datos, tarjeta y movimientos (libro, mas recientes primero).
+ * RLS limita todo a los comercios del owner. Devuelve null si no existe / no es suyo.
+ */
+export async function getCustomerDetail(merchantId, customerId) {
+  const { data: c, error } = await supabase
+    .from('customers')
+    .select(
+      'id, full_name, email, phone_e164, created_at, last_visit_at, customer_cards(id, balance, status, created_at), consents(purpose, revoked_at)',
+    )
+    .eq('merchant_id', merchantId)
+    .eq('id', customerId)
+    .maybeSingle()
+  if (error) throw error
+  if (!c) return null
+  const card = c.customer_cards?.[0] ?? null
+  let movements = []
+  if (card) {
+    const { data, error: e2 } = await supabase
+      .from('loyalty_ledger')
+      .select('id, kind, delta, balance_after, created_at')
+      .eq('merchant_id', merchantId)
+      .eq('card_id', card.id)
+      .order('created_at', { ascending: false })
+      .limit(500)
+    if (e2) throw e2
+    movements = data
+  }
+  return {
+    ...shape(c),
+    cardStatus: card?.status ?? null,
+    movements: movements.map((m) => ({
+      id: m.id,
+      kind: m.kind,
+      delta: m.delta,
+      balanceAfter: m.balance_after,
+      at: m.created_at,
+    })),
+  }
+}

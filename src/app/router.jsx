@@ -14,6 +14,7 @@ const PanelLayout = lazy(() => import('../features/panel/PanelLayout.jsx'))
 const OnboardingPage = lazy(() => import('../features/merchant/OnboardingPage.jsx'))
 const CardConfigPage = lazy(() => import('../features/card-config/CardConfigPage.jsx'))
 const ClientsPage = lazy(() => import('../features/clients/ClientsPage.jsx'))
+const CustomerDetailPage = lazy(() => import('../features/clients/CustomerDetailPage.jsx'))
 const SharePage = lazy(() => import('../features/share/SharePage.jsx'))
 
 const lz = (el) => <Suspense fallback={null}>{el}</Suspense>
@@ -23,8 +24,7 @@ export const router = createBrowserRouter([
   { path: '/c/:slug', element: lz(<EnrollPage />) },
   { path: '/c/:slug/privacidad', element: lz(<PrivacyPage />) },
   { path: '/p/:token', element: lz(<PassPage />) },
-  { path: '/v/:slug', element: lz(<CardActionPage action="visit" />) },
-  { path: '/r/:slug', element: lz(<CardActionPage action="redeem" />) },
+  { path: '/v/:slug', element: lz(<CardActionPage />) },
   {
     path: '/app',
     element: lz(<AppRoot />),
@@ -41,6 +41,7 @@ export const router = createBrowserRouter([
               { path: 'card', element: lz(<CardConfigPage />) },
               { path: 'share', element: lz(<SharePage />) },
               { path: 'clientes', element: lz(<ClientsPage />) },
+              { path: 'clientes/:id', element: lz(<CustomerDetailPage />) },
             ],
           },
         ],

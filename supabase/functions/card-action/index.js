@@ -1,8 +1,7 @@
 // Edge Function: card-action  (POST, publica, verify_jwt=false)
-// POST {slug, pass_token, action: 'visit'|'redeem'} -> 200 {result, balance, threshold, ...}
-// El cliente escanea el QR/NFC de visita (/v/:slug) o de canje (/r/:slug); el token del pase
-// (customer_cards.public_id) lo identifica. Logica de negocio en SQL (register_visit /
-// redeem_reward, service_role). Aqui: CORS, validacion, rate limit y traduccion de errores.
+// POST {slug, pass_token} -> 200 {result, balance, threshold, ...}  (result: visit_added | reward_earned | cooldown | not_supported)
+// El cliente escanea el QR/NFC de caja (/v/:slug): suma visita y, al completar, canjea y reinicia; el token del pase
+// (customer_cards.public_id) lo identifica. Logica de negocio en SQL (register_visit, service_role). Aqui: CORS, validacion, rate limit y traduccion de errores.
 // Logs: solo request_id, accion y resultado. Sin token ni PII.
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsFor, parseAllowedOrigins } from '../_shared/cors.js'
@@ -19,7 +18,6 @@ import {
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const SLUG_RE = /^[a-z0-9][a-z0-9-]{1,62}$/
-const RPC = { visit: 'register_visit', redeem: 'redeem_reward' }
 
 let _supabase
 function db() {
@@ -37,7 +35,7 @@ function db() {
 async function syncWallet(requestId, token, data) {
   try {
     if (Deno.env.get('GOOGLE_WALLET_ENABLED') !== 'true') return
-    if (data.result !== 'visit_added' && data.result !== 'redeemed') return
+    if (data.result !== 'visit_added' && data.result !== 'reward_earned') return
     const issuerId = (Deno.env.get('GOOGLE_WALLET_ISSUER_ID') ?? '').trim()
     const saEmail = (Deno.env.get('GOOGLE_WALLET_SA_EMAIL') ?? '').trim()
     if (!issuerId || !saEmail) return
@@ -51,6 +49,7 @@ async function syncWallet(requestId, token, data) {
         balance: data.balance,
         threshold: data.threshold,
         reward: data.reward,
+        earned: data.result === 'reward_earned',
       }),
       token: auth.token,
       fetchImpl: fetch,
@@ -87,9 +86,7 @@ export async function handle(req) {
     }
     const slug = typeof body?.slug === 'string' ? body.slug.trim().toLowerCase() : ''
     const token = typeof body?.pass_token === 'string' ? body.pass_token.trim().toLowerCase() : ''
-    const action = body?.action
-    if (!SLUG_RE.test(slug) || !UUID_RE.test(token) || !Object.hasOwn(RPC, action))
-      return fail(400, 'invalid_token')
+    if (!SLUG_RE.test(slug) || !UUID_RE.test(token)) return fail(400, 'invalid_token')
 
     const supabase = db()
     const salt = Deno.env.get('IP_HASH_SALT') ?? ''
@@ -105,14 +102,14 @@ export async function handle(req) {
     }
     if (!rl.allowed) return fail(429, 'rate_limited', { retry_after: rl.retry_after })
 
-    const { data, error } = await supabase.rpc(RPC[action], { p_slug: slug, p_token: token })
+    const { data, error } = await supabase.rpc('register_visit', { p_slug: slug, p_token: token })
     if (error || !data || typeof data !== 'object') {
-      log(requestId, 'db_error', { action, pg_code: error?.code })
+      log(requestId, 'db_error', { pg_code: error?.code })
       return fail(500, 'internal')
     }
     if (data.result === 'not_found') return fail(404, 'not_found')
 
-    log(requestId, 'card_action', { action, result: data.result })
+    log(requestId, 'card_action', { result: data.result })
     await syncWallet(requestId, token, data)
     return json(data, 200, h)
   } catch (e) {

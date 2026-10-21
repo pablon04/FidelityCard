@@ -29,28 +29,17 @@ function describe(r) {
   const left = Math.max(r.threshold - r.balance, 0)
   switch (r.result) {
     case 'visit_added':
-      return r.reward_ready
-        ? {
-            tone: 'success',
-            title: '¡Visita sumada!',
-            text: `Ya tienes tu premio: ${r.reward}. Pídelo en caja escaneando el código de canje.`,
-          }
-        : {
-            tone: 'success',
-            title: '¡Visita sumada!',
-            text: `Llevas ${r.balance} de ${r.threshold}. Te ${left === 1 ? 'falta 1 visita' : `faltan ${left} visitas`} para tu premio.`,
-          }
-    case 'redeemed':
       return {
         tone: 'success',
-        title: '¡Premio canjeado!',
-        text: `${r.reward}. Te quedan ${r.balance} de ${r.threshold} visitas.`,
+        title: '¡Visita sumada!',
+        text: `Llevas ${r.balance} de ${r.threshold}. Te ${left === 1 ? 'falta 1 visita' : `faltan ${left} visitas`} para tu premio.`,
       }
-    case 'not_enough':
+    case 'reward_earned':
       return {
-        tone: 'info',
-        title: 'Aún no tienes premio',
-        text: `Llevas ${r.balance} de ${r.threshold} visitas. Te ${left === 1 ? 'falta 1' : `faltan ${left}`} para canjear.`,
+        tone: 'success',
+        title: '¡Premio conseguido!',
+        text: `${r.reward}. Enseña esta pantalla en caja. Tu tarjeta vuelve a empezar (${r.balance} de ${r.threshold}).`,
+        reward: true,
       }
     case 'cooldown':
       return {
@@ -69,8 +58,8 @@ function describe(r) {
   }
 }
 
-/** /v/:slug (action='visit') y /r/:slug (action='redeem'). Sin login: usa el token del pase. */
-export default function CardActionPage({ action }) {
+/** /v/:slug: suma visita y, al completar la tarjeta, da el premio. Sin login: usa el token del pase. */
+export default function CardActionPage() {
   const { slug } = useParams()
   const [params] = useSearchParams()
   const token = readToken(slug, params.get('t'))
@@ -80,13 +69,13 @@ export default function CardActionPage({ action }) {
 
   const run = () => {
     setState({ status: 'loading' })
-    cardAction(slug, token, action)
+    cardAction(slug, token)
       .then((result) => setState({ status: 'done', result }))
       .catch((e) => setState({ status: 'error', code: e instanceof ApiError ? e.code : 'network' }))
   }
 
   useEffect(() => {
-    document.title = action === 'visit' ? 'Sumar visita' : 'Canjear premio'
+    document.title = 'Sumar visita'
     getPublicMerchant(slug)
       .then(setMerchant)
       .catch(() => {})
@@ -104,14 +93,17 @@ export default function CardActionPage({ action }) {
       aria-busy={state.status === 'loading'}
     >
       {merchant?.name && <p className="text-lg font-semibold">{merchant.name}</p>}
-      <h1 className="text-2xl font-bold">
-        {info?.title ?? (action === 'visit' ? 'Sumando tu visita…' : 'Canjeando tu premio…')}
-      </h1>
+      <h1 className="text-2xl font-bold">{info?.title ?? 'Sumando tu visita…'}</h1>
       {state.status === 'loading' && <Skeleton className="h-16 w-full max-w-sm" />}
       {info && (
         <Alert tone={info.tone} className="w-full max-w-sm">
           {info.text}
         </Alert>
+      )}
+      {info?.reward && (
+        <p className="w-full max-w-sm rounded-card border-2 border-success p-4 text-lg font-bold">
+          🎁 {new Date().toLocaleString('es-ES')}
+        </p>
       )}
       {state.status === 'error' && (
         <div className="w-full max-w-sm space-y-3">

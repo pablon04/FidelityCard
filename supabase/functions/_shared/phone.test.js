@@ -12,7 +12,17 @@ Deno.test('prefijo internacional se respeta', () => {
   assertEquals(normalizePhone('+44 7911 123456'), { ok: true, e164: '+447911123456' })
 })
 Deno.test('invalidos', () => {
-  for (const bad of ['', 'abc', '123', '+34 123', '600 11 22', 12345678, null, undefined, '6001122334455667788990']) {
+  for (const bad of [
+    '',
+    'abc',
+    '123',
+    '+34 123',
+    '600 11 22',
+    12345678,
+    null,
+    undefined,
+    '6001122334455667788990',
+  ]) {
     assertEquals(normalizePhone(bad).ok, false, String(bad))
   }
 })

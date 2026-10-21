@@ -118,16 +118,17 @@ export async function getGoogleSaveUrl(passToken) {
 }
 
 /**
- * Visita o canje (QR/NFC del comercio): Edge Function card-action.
- * POST {slug, pass_token, action:'visit'|'redeem'} -> 200 {result, balance, threshold, ...}
- * result: visit_added | cooldown | redeemed | not_enough | not_supported.
+ * Visita (QR/NFC de caja): Edge Function card-action. Si con la visita se completa la tarjeta,
+ * el servidor da el premio y la reinicia en la misma operacion.
+ * POST {slug, pass_token} -> 200 {result, balance, threshold, reward?}
+ * result: visit_added | reward_earned | cooldown | not_supported.
  * Errores {error:{code}}: invalid_token(400), not_found(404), rate_limited(429), internal(500).
  */
-export async function cardAction(slug, passToken, action) {
+export async function cardAction(slug, passToken) {
   const res = await request(`${env.supabaseUrl}/functions/v1/card-action`, {
     method: 'POST',
     headers: baseHeaders(),
-    body: JSON.stringify({ slug, pass_token: passToken, action }),
+    body: JSON.stringify({ slug, pass_token: passToken }),
   })
   let body = null
   try {

@@ -14,9 +14,13 @@ import { mapRpcError, mapRpcSuccess } from '../_shared/enroll-map.js'
 
 let _supabase
 function db() {
-  _supabase ??= createClient(Deno.env.get('SUPABASE_URL'), Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'), {
-    auth: { persistSession: false, autoRefreshToken: false },
-  })
+  _supabase ??= createClient(
+    Deno.env.get('SUPABASE_URL'),
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'),
+    {
+      auth: { persistSession: false, autoRefreshToken: false },
+    },
+  )
   return _supabase
 }
 
@@ -35,18 +39,24 @@ async function currentConsentVersions(supabase) {
 
 export async function handle(req) {
   const requestId = crypto.randomUUID()
-  const cors = corsFor(req.headers.get('origin'), parseAllowedOrigins(Deno.env.get('ALLOWED_ORIGINS')))
+  const cors = corsFor(
+    req.headers.get('origin'),
+    parseAllowedOrigins(Deno.env.get('ALLOWED_ORIGINS')),
+  )
   const h = { ...cors.headers, 'x-request-id': requestId }
-  const fail = (status, code, opts = {}) => errorResponse(status, code, { ...opts, headers: { ...h, ...(opts.headers ?? {}) } })
+  const fail = (status, code, opts = {}) =>
+    errorResponse(status, code, { ...opts, headers: { ...h, ...(opts.headers ?? {}) } })
 
   try {
     if (!cors.allowed) return fail(403, 'origin_not_allowed')
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: h })
-    if (req.method !== 'POST') return fail(405, 'method_not_allowed', { headers: { allow: 'POST, OPTIONS' } })
+    if (req.method !== 'POST')
+      return fail(405, 'method_not_allowed', { headers: { allow: 'POST, OPTIONS' } })
 
     // Cuerpo acotado y JSON valido.
     const text = await req.text()
-    if (new TextEncoder().encode(text).length > MAX_BODY_BYTES) return fail(413, 'payload_too_large')
+    if (new TextEncoder().encode(text).length > MAX_BODY_BYTES)
+      return fail(413, 'payload_too_large')
     let body
     try {
       body = JSON.parse(text)
@@ -59,7 +69,11 @@ export async function handle(req) {
       log(requestId, 'honeypot')
       const token = crypto.randomUUID()
       const base = (Deno.env.get('PUBLIC_BASE_URL') ?? '').replace(/\/+$/, '')
-      return json({ status: 'created', pass_token: token, wallet: { web_url: `${base}/p/${token}` } }, 200, h)
+      return json(
+        { status: 'created', pass_token: token, wallet: { web_url: `${base}/p/${token}` } },
+        200,
+        h,
+      )
     }
 
     const v = validateEnrollBody(body)

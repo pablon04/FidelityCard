@@ -194,22 +194,14 @@ export default function SharePage() {
 
       {program.type === 'visits' && (
         <>
-          <h2 className="pt-2 text-xl font-bold">Códigos de caja</h2>
+          <h2 className="pt-2 text-xl font-bold">Código de caja</h2>
           <ActionCode
             id="h-visit"
-            title="Sumar visita"
-            help="El cliente lo escanea o acerca el móvil cada vez que viene. Suma una visita a su tarjeta."
+            title="Visita y premio"
+            help="El cliente lo escanea o acerca el móvil cada vez que viene: suma una visita. Cuando completa la tarjeta, recibe el premio automáticamente, enseña la pantalla en caja y su tarjeta vuelve a empezar."
             url={`${publicBase()}/v/${merchant.slug}`}
             slug={merchant.slug}
             file="visita"
-          />
-          <ActionCode
-            id="h-redeem"
-            title="Canjear premio"
-            help="El cliente lo escanea o acerca el móvil cuando ha completado sus visitas. Descuenta las visitas y muestra el premio."
-            url={`${publicBase()}/r/${merchant.slug}`}
-            slug={merchant.slug}
-            file="canje"
           />
         </>
       )}
