@@ -12,7 +12,7 @@ const fmtDateTime = (iso) =>
 const KIND = {
   earn_visit: 'Visita',
   redeem: 'Premio canjeado',
-  earn_points: 'Puntos',
+  earn_points: 'Puntos sumados',
   adjust: 'Ajuste',
   reversal: 'Anulación',
 }

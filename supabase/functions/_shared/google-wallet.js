@@ -102,9 +102,16 @@ export function buildLoyaltyObject(p) {
  */
 export function loyaltyUpdate(p) {
   const left = p.threshold - p.balance
+  const unit = p.type === 'points' ? ['punto', 'puntos'] : ['visita', 'visitas']
   let status =
-    left === 1 ? 'Te falta 1 visita para tu premio.' : `Te faltan ${left} visitas para tu premio.`
-  if (p.earned) status = '¡Premio conseguido en tu última visita! Se te ha reiniciado la tarjeta.'
+    left === 1
+      ? `Te falta 1 ${unit[0]} para tu premio.`
+      : `Te faltan ${left} ${unit[1]} para tu premio.`
+  if (p.earned)
+    status =
+      p.type === 'points'
+        ? '¡Premio conseguido en tu última visita! Se han descontado los puntos.'
+        : '¡Premio conseguido en tu última visita! Se te ha reiniciado la tarjeta.'
   return {
     loyaltyPoints: {
       label: p.type === 'visits' ? 'Visitas' : 'Puntos',

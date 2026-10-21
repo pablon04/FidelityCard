@@ -45,7 +45,7 @@ async function syncWallet(requestId, token, data) {
     const r = await patchLoyaltyObject({
       id: objectId(issuerId, token),
       update: loyaltyUpdate({
-        type: 'visits',
+        type: data.type,
         balance: data.balance,
         threshold: data.threshold,
         reward: data.reward,

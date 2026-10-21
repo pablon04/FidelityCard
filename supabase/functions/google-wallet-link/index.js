@@ -183,17 +183,15 @@ export async function handle(req) {
     const save_url = await buildSaveUrl({ saEmail, key, objectId: obj.id })
 
     // Registro del pase (idempotente por UNIQUE(card_id, platform)) y evento.
-    const { error: pe } = await supabase
-      .from('wallet_passes')
-      .upsert(
-        {
-          merchant_id: card.merchant_id,
-          card_id: card.id,
-          platform: 'google',
-          google_object_id: objectId(issuerId, token),
-        },
-        { onConflict: 'card_id,platform' },
-      )
+    const { error: pe } = await supabase.from('wallet_passes').upsert(
+      {
+        merchant_id: card.merchant_id,
+        card_id: card.id,
+        platform: 'google',
+        google_object_id: objectId(issuerId, token),
+      },
+      { onConflict: 'card_id,platform' },
+    )
     if (pe) log(requestId, 'wallet_pass_upsert_error', { pg_code: pe.code })
     await walletEvent(supabase, card.merchant_id, card.id, 'save_url_issued')
 

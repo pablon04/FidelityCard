@@ -27,18 +27,23 @@ const ERRORS = {
 
 function describe(r) {
   const left = Math.max(r.threshold - r.balance, 0)
+  const points = r.type === 'points'
   switch (r.result) {
     case 'visit_added':
       return {
         tone: 'success',
-        title: '¡Visita sumada!',
-        text: `Llevas ${r.balance} de ${r.threshold}. Te ${left === 1 ? 'falta 1 visita' : `faltan ${left} visitas`} para tu premio.`,
+        title: points ? `¡+${r.gained} ${r.gained === 1 ? 'punto' : 'puntos'}!` : '¡Visita sumada!',
+        text: points
+          ? `Llevas ${r.balance} de ${r.threshold} puntos. Te ${left === 1 ? 'falta 1 punto' : `faltan ${left} puntos`} para tu premio.`
+          : `Llevas ${r.balance} de ${r.threshold}. Te ${left === 1 ? 'falta 1 visita' : `faltan ${left} visitas`} para tu premio.`,
       }
     case 'reward_earned':
       return {
         tone: 'success',
         title: '¡Premio conseguido!',
-        text: `${r.reward}. Enseña esta pantalla en caja. Tu tarjeta vuelve a empezar (${r.balance} de ${r.threshold}).`,
+        text: points
+          ? `${r.reward}. Enseña esta pantalla en caja. Te quedan ${r.balance} de ${r.threshold} puntos.`
+          : `${r.reward}. Enseña esta pantalla en caja. Tu tarjeta vuelve a empezar (${r.balance} de ${r.threshold}).`,
         reward: true,
       }
     case 'cooldown':

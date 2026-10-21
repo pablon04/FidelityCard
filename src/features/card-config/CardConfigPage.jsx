@@ -29,7 +29,7 @@ function initial(merchant, program) {
     brand_color: program?.brand_color ?? '#4F46E5',
     type: program?.type ?? 'visits',
     threshold: program?.threshold ?? 8,
-    points_per_currency: Number(program?.points_per_currency ?? 1),
+    points_per_visit: Number(program?.points_per_visit ?? 1),
     reward_description: program?.reward_description ?? '',
     legal_name: merchant.legal_name ?? '',
     tax_id: merchant.tax_id ?? '',
@@ -48,7 +48,12 @@ function validate(v, forActivate) {
   } else {
     if (!Number.isInteger(v.threshold) || v.threshold < 1)
       e.threshold = 'Escribe un número entero de 1 o más.'
-    if (!(v.points_per_currency > 0)) e.points_per_currency = 'Escribe un número mayor que 0.'
+    if (
+      !Number.isInteger(v.points_per_visit) ||
+      v.points_per_visit < 1 ||
+      v.points_per_visit > 1000
+    )
+      e.points_per_visit = 'Escribe un número entero entre 1 y 1000.'
   }
   const r = v.reward_description.trim().length
   if (r < 3 || r > 60)
@@ -381,17 +386,21 @@ export default function CardConfigPage() {
             ) : (
               <>
                 <TextField
-                  name="points_per_currency"
-                  label="Puntos por cada 1 € gastado"
+                  name="points_per_visit"
+                  label="Puntos que suma cada pase"
                   required
                   type="number"
-                  inputMode="decimal"
-                  min="0.01"
-                  step="0.01"
-                  value={Number.isNaN(v.points_per_currency) ? '' : v.points_per_currency}
-                  onChange={num('points_per_currency')}
-                  error={errors.points_per_currency}
-                  help={`Con 10 € gastados, tu cliente suma ${Math.round(10 * (v.points_per_currency || 0))} puntos.`}
+                  inputMode="numeric"
+                  min="1"
+                  max="1000"
+                  value={Number.isNaN(v.points_per_visit) ? '' : v.points_per_visit}
+                  onChange={num('points_per_visit')}
+                  error={errors.points_per_visit}
+                  help={
+                    v.points_per_visit >= 1 && v.threshold >= 1
+                      ? `Cada vez que tu cliente pase el QR o NFC de caja suma ${v.points_per_visit} ${v.points_per_visit === 1 ? 'punto' : 'puntos'}. Necesita ${Math.ceil(v.threshold / v.points_per_visit)} pases para la recompensa.`
+                      : 'Los puntos que suma el cliente cada vez que pasa el QR o NFC de caja.'
+                  }
                 />
                 <TextField
                   name="threshold"

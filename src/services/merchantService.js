@@ -74,7 +74,8 @@ export async function saveProgram(merchantId, existing, values) {
   const row = {
     type: values.type,
     threshold: values.threshold,
-    points_per_currency: values.type === 'points' ? values.points_per_currency : null,
+    points_per_visit: values.type === 'points' ? values.points_per_visit : null,
+    points_per_currency: null,
     reward_description: values.reward_description.trim(),
     card_name: values.card_name.trim(),
     brand_color: values.brand_color,

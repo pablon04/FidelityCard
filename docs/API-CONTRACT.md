@@ -101,9 +101,9 @@ No hay nombre del cliente ni `serial` (el QR codifica el `token`).
 ### Acceso directo por RLS (supabase-js)
 - SELECT: `merchants`, `merchant_members`, `loyalty_programs`, `consent_texts`, `customers`, `customer_cards`, `consents`, `loyalty_ledger` (clientes/tarjetas/consents/ledger solo owner).
 - UPDATE `merchants`: `name, legal_name, tax_id, privacy_email` (nunca `slug`).
-- INSERT/UPDATE `loyalty_programs`: `merchant_id, type, threshold, points_per_currency, reward_description, visit_cooldown_minutes, card_name, brand_color, logo_path, status`. Reglas:
+- INSERT/UPDATE `loyalty_programs`: `merchant_id, type, threshold, points_per_visit, points_per_currency, reward_description, visit_cooldown_minutes, card_name, brand_color, logo_path, status`. Reglas:
   - Crear siempre como `draft` (default). **Poner `status='active'` directamente falla (`use_activate_card`, 42501): usar `activate_card`.** `archived` si se puede poner directamente.
-  - `visits` => `points_per_currency` NULL; `points` => > 0. `threshold` 1..100000.
+  - `visits` => `points_per_visit` NULL; `points` => `points_per_visit` entero 1..1000 (puntos que suma cada pase por el QR/NFC de caja; migracion 0006). `points_per_currency` en desuso (NULL). `threshold` 1..100000.
   - `type` no cambia si ya hay clientes inscritos (23514).
   - `logo_path` debe empezar por `<merchant_id>/` (si no, `invalid_logo_path` 22023). Subir a Storage en `merchant-logos/<merchant_id>/<fichero>`.
 - Sin acceso a `wallet_passes`, `rate_limits`, `wallet_events` (solo service_role).

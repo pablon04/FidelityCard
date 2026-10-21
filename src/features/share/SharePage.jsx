@@ -200,13 +200,17 @@ export default function SharePage() {
         </div>
       </section>
 
-      {program.type === 'visits' && (
+      {(program.type === 'visits' || program.type === 'points') && (
         <>
           <h2 className="pt-2 text-xl font-bold">Código de caja</h2>
           <ActionCode
             id="h-visit"
-            title="Visita y premio"
-            help="El cliente lo escanea o acerca el móvil cada vez que viene: suma una visita. Cuando completa la tarjeta, recibe el premio automáticamente, enseña la pantalla en caja y su tarjeta vuelve a empezar."
+            title={program.type === 'points' ? 'Puntos y premio' : 'Visita y premio'}
+            help={
+              program.type === 'points'
+                ? `El cliente lo escanea o acerca el móvil cada vez que compra: suma ${program.points_per_visit ?? 1} ${(program.points_per_visit ?? 1) === 1 ? 'punto' : 'puntos'}. Cuando llega a ${program.threshold} puntos, recibe el premio automáticamente, enseña la pantalla en caja y se le descuentan esos puntos.`
+                : 'El cliente lo escanea o acerca el móvil cada vez que viene: suma una visita. Cuando completa la tarjeta, recibe el premio automáticamente, enseña la pantalla en caja y su tarjeta vuelve a empezar.'
+            }
             url={`${publicBase()}/v/${merchant.slug}`}
             slug={merchant.slug}
             file="visita"
