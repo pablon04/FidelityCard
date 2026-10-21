@@ -8,11 +8,14 @@ import { corsFor, parseAllowedOrigins } from '../_shared/cors.js'
 import { errorResponse, json, log } from '../_shared/errors.js'
 import { checkRateLimits, hashKey } from '../_shared/rate-limit.js'
 import { clientIp } from '../_shared/client-info.js'
+import { logoUrl } from '../_shared/enroll-map.js'
 import {
+  buildLoyaltyClass,
   getAccessToken,
   importPrivateKey,
   loyaltyUpdate,
   objectId,
+  patchLoyaltyClass,
   patchLoyaltyObject,
 } from '../_shared/google-wallet.js'
 
@@ -55,6 +58,28 @@ async function syncWallet(requestId, token, data) {
       fetchImpl: fetch,
     })
     log(requestId, 'wallet_sync', r)
+
+    // Clase (nombre, color, logo): se refresca en cada pase; asi los cambios del comercio
+    // llegan aunque el empuje al guardar hubiese fallado.
+    const publicBaseUrl = (Deno.env.get('PUBLIC_BASE_URL') ?? '').trim()
+    const fallbackLogo =
+      Deno.env.get('GOOGLE_WALLET_FALLBACK_LOGO_URL') ||
+      `${publicBaseUrl.replace(/\/+$/, '')}/wallet-logo.png`
+    if (data.card_name && data.brand_color && data.merchant_id) {
+      const cr = await patchLoyaltyClass({
+        cls: buildLoyaltyClass({
+          issuerId,
+          merchantId: data.merchant_id,
+          merchantName: data.merchant_name ?? data.card_name,
+          cardName: data.card_name,
+          color: data.brand_color,
+          logoUrl: logoUrl(Deno.env.get('SUPABASE_URL') ?? '', data.logo_path) ?? fallbackLogo,
+        }),
+        token: auth.token,
+        fetchImpl: fetch,
+      })
+      log(requestId, 'wallet_class_sync', cr)
+    }
   } catch (e) {
     log(requestId, 'wallet_sync', { ok: false, reason: String(e?.name ?? 'unknown') })
   }
@@ -111,7 +136,8 @@ export async function handle(req) {
 
     log(requestId, 'card_action', { result: data.result })
     await syncWallet(requestId, token, data)
-    return json(data, 200, h)
+    const { merchant_id: _m, ...publicData } = data // id interno: no sale al cliente
+    return json(publicData, 200, h)
   } catch (e) {
     log(requestId, 'unhandled', { name: e?.name })
     return fail(500, 'internal')

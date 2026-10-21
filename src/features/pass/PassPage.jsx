@@ -73,7 +73,9 @@ function PassView({ pass }) {
   const blocked = pass.status === 'blocked'
   return (
     <>
-      <h1 className="mb-4 text-xl font-semibold">Tu tarjeta de {pass.merchant_name}</h1>
+      <h1 className="mb-4 text-xl font-semibold">
+        Tu tarjeta de {c.card_name || pass.merchant_name}
+      </h1>
       <PassCard
         name={c.card_name || pass.merchant_name}
         logoUrl={logoUrl(c.logo_path, env.supabaseUrl)}
@@ -83,7 +85,7 @@ function PassView({ pass }) {
         balance={pass.balance}
         reward={c.reward_description}
         qrValue={pass.token}
-        qrAlt={`Código QR de tu tarjeta de ${pass.merchant_name}`}
+        qrAlt={`Código QR de tu tarjeta de ${c.card_name || pass.merchant_name}`}
       />
       {blocked && (
         <Alert tone="warning" className="mt-4 w-full max-w-sm">

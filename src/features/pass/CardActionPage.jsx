@@ -91,13 +91,14 @@ export default function CardActionPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  const cardTitle = state.result?.card_name ?? merchant?.card?.card_name ?? merchant?.name
   const info = state.status === 'done' ? describe(state.result) : null
   return (
     <main
       className="mx-auto flex min-h-screen max-w-landing flex-col items-center gap-4 px-4 py-10 text-center"
       aria-busy={state.status === 'loading'}
     >
-      {merchant?.name && <p className="text-lg font-semibold">{merchant.name}</p>}
+      {cardTitle && <p className="text-lg font-semibold">{cardTitle}</p>}
       <h1 className="text-2xl font-bold">{info?.title ?? 'Sumando tu visita…'}</h1>
       {state.status === 'loading' && <Skeleton className="h-16 w-full max-w-sm" />}
       {info && (
