@@ -14,6 +14,7 @@ const MESSAGES = {
   wallet_disabled: 'Google Wallet no esta disponible ahora mismo.',
   invalid_token: 'Enlace de pase no valido.',
   not_found: 'No encontramos este pase.',
+  unauthorized: 'Sesion no valida.',
   internal: 'Error interno. Intentalo mas tarde.',
 }
 

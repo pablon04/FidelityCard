@@ -435,3 +435,8 @@ entrypoint = "./functions/google-wallet-link/index.js"
 enabled = true
 verify_jwt = false
 entrypoint = "./functions/card-action/index.js"
+
+[functions.wallet-sync-class]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/wallet-sync-class/index.js"

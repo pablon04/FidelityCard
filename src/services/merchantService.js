@@ -3,6 +3,7 @@
  * SQL 0001 (create_merchant, loyalty_programs) y ARCHITECTURE 3.6.
  * Contrato: docs/API-CONTRACT.md (activate_card, create_merchant, logo_path = '<merchant_id>/...').
  */
+import { env } from '../lib/env.js'
 import { supabase } from '../lib/supabase.js'
 import { randomSuffix, slugify } from '../lib/format.js'
 
@@ -124,4 +125,28 @@ export async function uploadLogo(merchantId, file) {
     .upload(path, file, { contentType: file.type, upsert: false })
   if (error) throw error
   return path
+}
+
+/**
+ * Empuja nombre, color y logo de la tarjeta activa a los pases ya guardados en Google Wallet
+ * (Edge Function wallet-sync-class). Best effort: nunca lanza ni bloquea el guardado.
+ */
+export async function syncWalletCard() {
+  try {
+    if (!env.googleWalletEnabled) return
+    const { data } = await supabase.auth.getSession()
+    const token = data?.session?.access_token
+    if (!token) return
+    await fetch(`${env.supabaseUrl}/functions/v1/wallet-sync-class`, {
+      method: 'POST',
+      headers: {
+        apikey: env.supabaseAnonKey,
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: '{}',
+    })
+  } catch {
+    /* ignorar: Wallet se actualizara en el siguiente guardado */
+  }
 }

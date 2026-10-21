@@ -13,6 +13,7 @@ import {
   activateProgram,
   countProgramCards,
   saveProgram,
+  syncWalletCard,
   updateMerchantLegal,
   uploadLogo,
 } from '../../services/merchantService.js'
@@ -129,6 +130,7 @@ export default function CardConfigPage() {
       await updateMerchantLegal(merchant.id, v)
       let p = await saveProgram(merchant.id, program, v)
       if (activate && p.status !== 'active') p = await activateProgram(p.id)
+      if (p.status === 'active') syncWalletCard() // nombre/color/logo a los pases ya guardados
       await refresh()
       setSaved(JSON.stringify(v))
       if (activate) navigate('/app/share', { state: { justActivated: true } })

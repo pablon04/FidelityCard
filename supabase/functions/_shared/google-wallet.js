@@ -136,6 +136,26 @@ export async function patchLoyaltyObject({ id, update, token, fetchImpl, timeout
   }
 }
 
+/**
+ * Actualiza la clase (nombre, color, logo) => cambia en TODOS los pases de ese comercio a la vez.
+ * Best effort. 404 = aun nadie guardo un pase de este comercio (normal).
+ * @returns {Promise<{ok:boolean, reason?:string}>}
+ */
+export async function patchLoyaltyClass({ cls, token, fetchImpl, timeoutMs = 5000 }) {
+  const { id, reviewStatus: _r, countryCode: _c, ...update } = cls
+  try {
+    const res = await fetchImpl(`${API}/loyaltyClass/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+      body: JSON.stringify(update),
+      signal: AbortSignal.timeout(timeoutMs),
+    })
+    return res.ok ? { ok: true } : { ok: false, reason: `google_http_${res.status}` }
+  } catch (e) {
+    return { ok: false, reason: `fetch_error:${String(e?.name ?? 'unknown').slice(0, 40)}` }
+  }
+}
+
 /** JWT "save to wallet" que referencia un objeto ya creado por la API. */
 export async function buildSaveUrl({
   saEmail,
