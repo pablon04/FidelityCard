@@ -45,12 +45,17 @@ function download(href, name) {
 function ActionCode({ id, title, help, url, slug, file }) {
   const urlQr = `${url}?s=qr`
   const urlNfc = `${url}?s=nfc`
-  const png = async () => {
+  const dl = async (fmt) => {
     const { default: QR } = await import('qrcode')
-    download(
-      await QR.toDataURL(urlQr, { errorCorrectionLevel: 'M', margin: 4, width: 1280 }),
-      `${file}-${slug}.png`,
-    )
+    const opts = { errorCorrectionLevel: 'M', margin: 4 }
+    if (fmt === 'png')
+      download(await QR.toDataURL(urlQr, { ...opts, width: 1280 }), `${file}-${slug}.png`)
+    else {
+      const svg = await QR.toString(urlQr, { ...opts, type: 'svg' })
+      const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }))
+      download(url, `${file}-${slug}.svg`)
+      URL.revokeObjectURL(url)
+    }
   }
   return (
     <section aria-labelledby={id} className="rounded-card border border-border-subtle p-4">
@@ -70,8 +75,11 @@ function ActionCode({ id, title, help, url, slug, file }) {
           <p className="break-all rounded-control bg-bg-muted p-2 text-sm">{urlNfc}</p>
           <div className="flex flex-wrap items-center gap-2">
             <CopyButton text={urlNfc} label="Copiar enlace NFC" />
-            <Button variant="secondary" onClick={png}>
+            <Button variant="secondary" onClick={() => dl('png')}>
               Descargar QR (PNG)
+            </Button>
+            <Button variant="secondary" onClick={() => dl('svg')}>
+              Descargar QR (SVG)
             </Button>
           </div>
         </div>
