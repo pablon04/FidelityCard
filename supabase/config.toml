@@ -430,3 +430,8 @@ entrypoint = "./functions/enroll-customer/index.js"
 enabled = true
 verify_jwt = false
 entrypoint = "./functions/google-wallet-link/index.js"
+
+[functions.card-action]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/card-action/index.js"

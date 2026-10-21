@@ -3,22 +3,31 @@ import { Alert } from '../../components/ui/Alert.jsx'
 import { Button } from '../../components/ui/Button.jsx'
 import { Skeleton } from '../../components/ui/Skeleton.jsx'
 import { toCsv } from '../../lib/csv.js'
-import { listAllCustomers, listCustomers } from '../../services/customersService.js'
+import {
+  SIGNUP_FILTERS,
+  VISIT_FILTERS,
+  listAllCustomers,
+  listCustomers,
+} from '../../services/customersService.js'
 import { useMerchant } from '../merchant/merchantCtx.js'
 
 const fmtDate = (iso) => new Date(iso).toLocaleDateString('es-ES')
+const fmtVisit = (iso) => (iso ? fmtDate(iso) : 'Nunca')
 
 export default function ClientsPage() {
   const { merchant, program } = useMerchant()
   const [input, setInput] = useState('')
   const [search, setSearch] = useState('')
   const [asc, setAsc] = useState(false)
+  const [signup, setSignup] = useState('all')
+  const [visit, setVisit] = useState('all')
+  const [sort, setSort] = useState('created')
   const [state, setState] = useState({ status: 'loading', rows: [], total: 0 })
   const [more, setMore] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [exportError, setExportError] = useState(false)
   const seq = useRef(0)
-  const opts = { search, ascending: asc }
+  const opts = { search, ascending: asc, signup, visit, sort }
 
   useEffect(() => {
     document.title = 'Clientes · FidelityCard'
@@ -33,10 +42,10 @@ export default function ClientsPage() {
   const load = useCallback(() => {
     const id = ++seq.current
     setState((s) => ({ ...s, status: 'loading' }))
-    listCustomers(merchant.id, { search, ascending: asc })
+    listCustomers(merchant.id, { search, ascending: asc, signup, visit, sort })
       .then(({ rows, total }) => id === seq.current && setState({ status: 'ready', rows, total }))
       .catch(() => id === seq.current && setState({ status: 'error', rows: [], total: 0 }))
-  }, [merchant.id, search, asc])
+  }, [merchant.id, search, asc, signup, visit, sort])
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -61,12 +70,13 @@ export default function ClientsPage() {
     try {
       const all = await listAllCustomers(merchant.id, opts)
       const csv = toCsv(
-        ['Nombre', 'Email', 'Teléfono', 'Fecha de alta', 'Marketing', 'Saldo'],
+        ['Nombre', 'Email', 'Teléfono', 'Fecha de alta', 'Última visita', 'Marketing', 'Saldo'],
         all.map((c) => [
           c.name,
           c.email,
           c.phone,
           fmtDate(c.createdAt),
+          c.lastVisitAt ? fmtDate(c.lastVisitAt) : '',
           c.marketing ? 'Sí' : 'No',
           c.balance ?? '',
         ]),
@@ -119,8 +129,62 @@ export default function ClientsPage() {
             className="min-h-[48px] w-full rounded-control border-[1.5px] border-border bg-surface px-3 text-base"
           />
         </div>
+        <div>
+          <label htmlFor="signup" className="mb-1.5 block text-sm font-medium">
+            Registrados
+          </label>
+          <select
+            id="signup"
+            value={signup}
+            onChange={(e) => setSignup(e.target.value)}
+            className="min-h-[48px] rounded-control border-[1.5px] border-border bg-surface px-3 text-base"
+          >
+            {SIGNUP_FILTERS.map((f) => (
+              <option key={f.value} value={f.value}>
+                {f.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="visit" className="mb-1.5 block text-sm font-medium">
+            Última visita
+          </label>
+          <select
+            id="visit"
+            value={visit}
+            onChange={(e) => setVisit(e.target.value)}
+            className="min-h-[48px] rounded-control border-[1.5px] border-border bg-surface px-3 text-base"
+          >
+            {VISIT_FILTERS.map((f) => (
+              <option key={f.value} value={f.value}>
+                {f.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="sort" className="mb-1.5 block text-sm font-medium">
+            Ordenar por
+          </label>
+          <select
+            id="sort"
+            value={sort}
+            onChange={(e) => setSort(e.target.value)}
+            className="min-h-[48px] rounded-control border-[1.5px] border-border bg-surface px-3 text-base"
+          >
+            <option value="created">Fecha de alta</option>
+            <option value="visit">Última visita</option>
+          </select>
+        </div>
         <Button variant="secondary" onClick={() => setAsc((a) => !a)} aria-pressed={asc}>
-          Fecha de alta: {asc ? 'más antiguos primero' : 'más recientes primero'}
+          {sort === 'visit'
+            ? asc
+              ? 'Más tiempo sin venir primero'
+              : 'Visitas más recientes primero'
+            : asc
+              ? 'Más antiguos primero'
+              : 'Más recientes primero'}
         </Button>
       </div>
 
@@ -141,7 +205,7 @@ export default function ClientsPage() {
         )}
         {status === 'ready' && rows.length === 0 && (
           <p className="rounded-card border border-border-subtle p-6 text-center text-text-muted">
-            {search
+            {search || signup !== 'all' || visit !== 'all'
               ? 'No hay clientes que coincidan con tu búsqueda.'
               : 'Aún no tienes clientes. Comparte tu QR o tu etiqueta NFC para empezar.'}
           </p>
@@ -165,6 +229,9 @@ export default function ClientsPage() {
                     Alta
                   </th>
                   <th scope="col" className="py-2 pr-3">
+                    Última visita
+                  </th>
+                  <th scope="col" className="py-2 pr-3">
                     Marketing
                   </th>
                   <th scope="col" className="py-2">
@@ -179,6 +246,7 @@ export default function ClientsPage() {
                     <td className="break-all py-2 pr-3">{c.email}</td>
                     <td className="whitespace-nowrap py-2 pr-3">{c.phone}</td>
                     <td className="whitespace-nowrap py-2 pr-3">{fmtDate(c.createdAt)}</td>
+                    <td className="whitespace-nowrap py-2 pr-3">{fmtVisit(c.lastVisitAt)}</td>
                     <td className="py-2 pr-3">{c.marketing ? 'Sí' : 'No'}</td>
                     <td className="whitespace-nowrap py-2">{progress(c)}</td>
                   </tr>
@@ -192,8 +260,8 @@ export default function ClientsPage() {
                   <p className="break-all text-sm">{c.email}</p>
                   <p className="text-sm">{c.phone}</p>
                   <p className="mt-1 text-sm text-text-muted">
-                    Alta {fmtDate(c.createdAt)} · Marketing: {c.marketing ? 'Sí' : 'No'} ·{' '}
-                    {progress(c)}
+                    Alta {fmtDate(c.createdAt)} · Última visita {fmtVisit(c.lastVisitAt)} ·
+                    Marketing: {c.marketing ? 'Sí' : 'No'} · {progress(c)}
                   </p>
                 </li>
               ))}

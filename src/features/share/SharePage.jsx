@@ -41,6 +41,45 @@ function download(href, name) {
   a.click()
 }
 
+/** QR + enlace NFC de una accion de caja (visita o canje). */
+function ActionCode({ id, title, help, url, slug, file }) {
+  const urlQr = `${url}?s=qr`
+  const urlNfc = `${url}?s=nfc`
+  const png = async () => {
+    const { default: QR } = await import('qrcode')
+    download(
+      await QR.toDataURL(urlQr, { errorCorrectionLevel: 'M', margin: 4, width: 1280 }),
+      `${file}-${slug}.png`,
+    )
+  }
+  return (
+    <section aria-labelledby={id} className="rounded-card border border-border-subtle p-4">
+      <h2 id={id} className="mb-1 text-lg font-semibold">
+        {title}
+      </h2>
+      <p className="mb-3 text-text-muted">{help}</p>
+      <div className="flex flex-wrap gap-6">
+        <QrImage
+          value={urlQr}
+          size={160}
+          alt={`Código QR: ${title}`}
+          className="rounded-control border border-border-subtle"
+        />
+        <div className="min-w-[200px] flex-1 space-y-2">
+          <p className="text-sm font-medium">Enlace para la etiqueta NFC</p>
+          <p className="break-all rounded-control bg-bg-muted p-2 text-sm">{urlNfc}</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <CopyButton text={urlNfc} label="Copiar enlace NFC" />
+            <Button variant="secondary" onClick={png}>
+              Descargar QR (PNG)
+            </Button>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
 export default function SharePage() {
   const { merchant, program } = useMerchant()
   const loc = useLocation()
@@ -152,6 +191,28 @@ export default function SharePage() {
           <CopyButton text={urlNfc} label="Copiar enlace NFC" />
         </div>
       </section>
+
+      {program.type === 'visits' && (
+        <>
+          <h2 className="pt-2 text-xl font-bold">Códigos de caja</h2>
+          <ActionCode
+            id="h-visit"
+            title="Sumar visita"
+            help="El cliente lo escanea o acerca el móvil cada vez que viene. Suma una visita a su tarjeta."
+            url={`${publicBase()}/v/${merchant.slug}`}
+            slug={merchant.slug}
+            file="visita"
+          />
+          <ActionCode
+            id="h-redeem"
+            title="Canjear premio"
+            help="El cliente lo escanea o acerca el móvil cuando ha completado sus visitas. Descuenta las visitas y muestra el premio."
+            url={`${publicBase()}/r/${merchant.slug}`}
+            slug={merchant.slug}
+            file="canje"
+          />
+        </>
+      )}
 
       <a
         href={base}

@@ -5,6 +5,7 @@ import { createBrowserRouter, Navigate } from 'react-router'
 const EnrollPage = lazy(() => import('../features/enroll/EnrollPage.jsx'))
 const PrivacyPage = lazy(() => import('../features/enroll/PrivacyPage.jsx'))
 const PassPage = lazy(() => import('../features/pass/PassPage.jsx'))
+const CardActionPage = lazy(() => import('../features/pass/CardActionPage.jsx'))
 const AppRoot = lazy(() => import('../features/auth/AppRoot.jsx'))
 const LoginPage = lazy(() => import('../features/auth/LoginPage.jsx'))
 const RequireAuth = lazy(() => import('../features/auth/RequireAuth.jsx'))
@@ -22,6 +23,8 @@ export const router = createBrowserRouter([
   { path: '/c/:slug', element: lz(<EnrollPage />) },
   { path: '/c/:slug/privacidad', element: lz(<PrivacyPage />) },
   { path: '/p/:token', element: lz(<PassPage />) },
+  { path: '/v/:slug', element: lz(<CardActionPage action="visit" />) },
+  { path: '/r/:slug', element: lz(<CardActionPage action="redeem" />) },
   {
     path: '/app',
     element: lz(<AppRoot />),

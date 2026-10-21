@@ -20,7 +20,16 @@ export default function PassPage() {
     if (!UUID.test(token)) return setState({ status: 'none' })
     setState({ status: 'loading' })
     getPublicPass(token)
-      .then((p) => setState(p ? { status: 'ok', pass: p } : { status: 'none' }))
+      .then((p) => {
+        if (p?.slug) {
+          try {
+            localStorage.setItem(`fc:pass:${p.slug}`, token) // para /v y /r sin volver a registrarse
+          } catch {
+            /* ignorar */
+          }
+        }
+        setState(p ? { status: 'ok', pass: p } : { status: 'none' })
+      })
       .catch(() => setState({ status: 'error' }))
   }, [token])
 

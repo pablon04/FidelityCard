@@ -116,3 +116,29 @@ export async function getGoogleSaveUrl(passToken) {
     retryAfter: (err.retry_after ?? Number(res.headers.get('retry-after'))) || undefined,
   })
 }
+
+/**
+ * Visita o canje (QR/NFC del comercio): Edge Function card-action.
+ * POST {slug, pass_token, action:'visit'|'redeem'} -> 200 {result, balance, threshold, ...}
+ * result: visit_added | cooldown | redeemed | not_enough | not_supported.
+ * Errores {error:{code}}: invalid_token(400), not_found(404), rate_limited(429), internal(500).
+ */
+export async function cardAction(slug, passToken, action) {
+  const res = await request(`${env.supabaseUrl}/functions/v1/card-action`, {
+    method: 'POST',
+    headers: baseHeaders(),
+    body: JSON.stringify({ slug, pass_token: passToken, action }),
+  })
+  let body = null
+  try {
+    body = await res.json()
+  } catch {
+    /* no JSON */
+  }
+  if (res.ok && typeof body?.result === 'string') return body
+  const err = body?.error ?? {}
+  throw new ApiError(err.code || 'internal', {
+    status: res.status,
+    retryAfter: (err.retry_after ?? Number(res.headers.get('retry-after'))) || undefined,
+  })
+}
