@@ -162,7 +162,9 @@ export async function patchLoyaltyObject({ id, update, token, fetchImpl, timeout
  * @returns {Promise<{ok:boolean, reason?:string}>}
  */
 export async function patchLoyaltyClass({ cls, token, fetchImpl, timeoutMs = 5000 }) {
-  const { id, reviewStatus: _r, countryCode: _c, ...update } = cls
+  // Una clase ya APROBADA solo se puede modificar reenviandola con reviewStatus UNDER_REVIEW
+  // (Google responde 400 si falta). En modo Demo se vuelve a aprobar sola.
+  const { id, countryCode: _c, ...update } = cls
   try {
     const res = await fetchImpl(`${API}/loyaltyClass/${encodeURIComponent(id)}`, {
       method: 'PATCH',
@@ -246,11 +248,10 @@ export async function ensureResource({ kind, id, body, token, fetchImpl }) {
     const res = await fetchImpl(url, { method: 'POST', headers, body: JSON.stringify(body) })
     if (res.ok) return { ok: true }
     if (res.status !== 409) return { ok: false, reason: `${kind}_google_http_${res.status}` }
-    const { reviewStatus: _r, ...patchBody } = body
     const upd = await fetchImpl(`${url}/${encodeURIComponent(id)}`, {
       method: 'PATCH',
       headers,
-      body: JSON.stringify(patchBody),
+      body: JSON.stringify(body),
     })
     return { ok: true, updated: upd.ok }
   } catch (e) {
