@@ -66,8 +66,20 @@ export async function handle(req) {
       global: { headers: { authorization: `Bearer ${jwt}` } },
       auth: { persistSession: false, autoRefreshToken: false },
     })
-    const { data: u, error: ue } = await userDb.auth.getUser(jwt)
-    if (ue || !u?.user) return fail(401, 'unauthorized')
+    // El token se valida con el cliente de servicio (consulta al servidor de Auth); el cliente
+    // con el JWT del usuario solo se usa para leer con RLS.
+    const svcAuth = createClient(url, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'), {
+      auth: { persistSession: false, autoRefreshToken: false },
+    })
+    const { data: u, error: ue } = await svcAuth.auth.getUser(jwt)
+    if (ue || !u?.user) {
+      log(requestId, 'auth_failed', {
+        status: ue?.status,
+        name: ue?.name,
+        msg: String(ue?.message ?? 'no_user').slice(0, 120),
+      })
+      return fail(401, 'unauthorized')
+    }
 
     const svc = createClient(url, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'), {
       auth: { persistSession: false, autoRefreshToken: false },
@@ -123,6 +135,15 @@ export async function handle(req) {
       return fail(500, 'internal')
     }
 
+    // El nombre de la tarjeta va delante del titulo: asi se ve quien escribe en la notificacion.
+    const { data: prog } = await userDb
+      .from('loyalty_programs')
+      .select('card_name')
+      .eq('merchant_id', merchantId)
+      .eq('status', 'active')
+      .maybeSingle()
+    const header = prog?.card_name ? `${prog.card_name}: ${title}` : title
+
     const messageBody = code ? `${text}\n\nCódigo: ${code}` : text
     const results = []
     const todo = rows.filter((r) => r.customer_cards?.[0]?.status === 'active')
@@ -141,7 +162,7 @@ export async function handle(req) {
         const r = queue[next++]
         const res = await addObjectMessage({
           id: objectId(issuerId, r.customer_cards[0].public_id),
-          header: title,
+          header,
           body: messageBody,
           messageId: crypto.randomUUID(),
           token: auth.token,

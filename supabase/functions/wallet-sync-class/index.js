@@ -42,8 +42,20 @@ export async function handle(req) {
       global: { headers: { authorization: `Bearer ${jwt}` } },
       auth: { persistSession: false, autoRefreshToken: false },
     })
-    const { data: u, error: ue } = await userDb.auth.getUser(jwt)
-    if (ue || !u?.user) return fail(401, 'unauthorized')
+    // El token se valida con el cliente de servicio (consulta al servidor de Auth); el cliente
+    // con el JWT del usuario solo se usa para leer con RLS.
+    const svcAuth = createClient(url, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'), {
+      auth: { persistSession: false, autoRefreshToken: false },
+    })
+    const { data: u, error: ue } = await svcAuth.auth.getUser(jwt)
+    if (ue || !u?.user) {
+      log(requestId, 'auth_failed', {
+        status: ue?.status,
+        name: ue?.name,
+        msg: String(ue?.message ?? 'no_user').slice(0, 120),
+      })
+      return fail(401, 'unauthorized')
+    }
 
     const svc = createClient(url, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'), {
       auth: { persistSession: false, autoRefreshToken: false },

@@ -24,7 +24,7 @@ const selectCls =
 
 /** /app/promocionar — mensaje con notificacion a la tarjeta de Wallet de los clientes elegidos. */
 export default function PromotePage() {
-  const { merchant } = useMerchant()
+  const { merchant, program } = useMerchant()
   const [signup, setSignup] = useState('all')
   const [visit, setVisit] = useState('away30')
   const [search, setSearch] = useState('')
@@ -274,7 +274,10 @@ export default function PromotePage() {
             aria-label="Vista previa"
           >
             <p className="text-sm text-text-muted">Vista previa en la tarjeta</p>
-            <p className="font-semibold">{title.trim()}</p>
+            <p className="font-semibold">
+              {program?.card_name ? `${program.card_name}: ` : ''}
+              {title.trim()}
+            </p>
             <p className="whitespace-pre-line">{preview}</p>
           </div>
         )}
