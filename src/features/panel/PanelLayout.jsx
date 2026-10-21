@@ -79,6 +79,9 @@ export default function PanelLayout() {
           <NavLink to="/app/clientes" className={linkCls}>
             Clientes
           </NavLink>
+          <NavLink to="/app/promocionar" className={linkCls}>
+            Promocionar
+          </NavLink>
         </nav>
         <div className="mt-auto space-y-3">
           {themeSelect}
@@ -107,7 +110,7 @@ export default function PanelLayout() {
       </div>
       <nav
         aria-label="Principal"
-        className="fixed inset-x-0 bottom-0 grid grid-cols-3 border-t border-border-subtle bg-surface md:hidden"
+        className="fixed inset-x-0 bottom-0 grid grid-cols-4 border-t border-border-subtle bg-surface md:hidden"
       >
         <NavLink
           to="/app/card"
@@ -126,6 +129,12 @@ export default function PanelLayout() {
           className={({ isActive }) => `${linkCls({ isActive })} justify-center rounded-none`}
         >
           Clientes
+        </NavLink>
+        <NavLink
+          to="/app/promocionar"
+          className={({ isActive }) => `${linkCls({ isActive })} justify-center rounded-none`}
+        >
+          Promocionar
         </NavLink>
       </nav>
     </div>

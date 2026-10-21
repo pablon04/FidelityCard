@@ -15,6 +15,7 @@ const OnboardingPage = lazy(() => import('../features/merchant/OnboardingPage.js
 const CardConfigPage = lazy(() => import('../features/card-config/CardConfigPage.jsx'))
 const ClientsPage = lazy(() => import('../features/clients/ClientsPage.jsx'))
 const CustomerDetailPage = lazy(() => import('../features/clients/CustomerDetailPage.jsx'))
+const PromotePage = lazy(() => import('../features/promote/PromotePage.jsx'))
 const SharePage = lazy(() => import('../features/share/SharePage.jsx'))
 
 const lz = (el) => <Suspense fallback={null}>{el}</Suspense>
@@ -41,6 +42,7 @@ export const router = createBrowserRouter([
               { path: 'card', element: lz(<CardConfigPage />) },
               { path: 'share', element: lz(<SharePage />) },
               { path: 'clientes', element: lz(<ClientsPage />) },
+              { path: 'promocionar', element: lz(<PromotePage />) },
               { path: 'clientes/:id', element: lz(<CustomerDetailPage />) },
             ],
           },

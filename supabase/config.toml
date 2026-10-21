@@ -440,3 +440,8 @@ entrypoint = "./functions/card-action/index.js"
 enabled = true
 verify_jwt = false
 entrypoint = "./functions/wallet-sync-class/index.js"
+
+[functions.send-promotion]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/send-promotion/index.js"

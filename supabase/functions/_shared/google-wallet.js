@@ -178,6 +178,35 @@ export async function patchLoyaltyClass({ cls, token, fetchImpl, timeoutMs = 500
   }
 }
 
+/**
+ * Anade un mensaje con notificacion push a un pase (addMessage). Best effort.
+ * 404 = el objeto no existe en Google. `messageId` unico por mensaje.
+ * @returns {Promise<{ok:boolean, reason?:string, detail?:string}>}
+ */
+export async function addObjectMessage({
+  id,
+  header,
+  body,
+  messageId,
+  token,
+  fetchImpl,
+  timeoutMs = 6000,
+}) {
+  try {
+    const res = await fetchImpl(`${API}/loyaltyObject/${encodeURIComponent(id)}/addMessage`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        message: { id: messageId, header, body, messageType: 'TEXT_AND_NOTIFY' },
+      }),
+      signal: AbortSignal.timeout(timeoutMs),
+    })
+    return res.ok ? { ok: true } : await googleFailure(res)
+  } catch (e) {
+    return { ok: false, reason: `fetch_error:${String(e?.name ?? 'unknown').slice(0, 40)}` }
+  }
+}
+
 /** JWT "save to wallet" que referencia un objeto ya creado por la API. */
 export async function buildSaveUrl({
   saEmail,
