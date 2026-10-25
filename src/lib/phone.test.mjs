@@ -1,7 +1,7 @@
 // Ejecutar con: node --test src/lib/phone.test.mjs
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { normalizePhone, stripSpanishPrefix } from './phone.js'
+import { dialOf, normalizePhone, splitE164, stripDialPrefix, stripSpanishPrefix } from './phone.js'
 
 const OK = '+34634513012'
 test('normaliza con o sin prefijo, sin duplicar', () => {
@@ -27,4 +27,20 @@ test('rechaza invalidos y acepta internacionales', () => {
     assert.equal(normalizePhone(v), null, v)
   assert.equal(normalizePhone('+44 7700 900123'), '+447700900123')
   assert.equal(normalizePhone('0044 7700 900123'), '+447700900123')
+})
+test('prefijo de otro pais', () => {
+  assert.equal(normalizePhone('07700 900123', '44'), '+447700900123')
+  assert.equal(normalizePhone('7700 900123', '44'), '+447700900123')
+  assert.equal(normalizePhone('06 12 34 56 78', '33'), '+33612345678')
+  assert.equal(normalizePhone('312 345 6789', '39'), '+393123456789')
+  assert.equal(normalizePhone('+34634513012', '44'), OK) // "+" escrito manda
+  assert.equal(normalizePhone('12', '44'), null)
+  assert.equal(stripDialPrefix('+44 7700 900123', '44'), '7700900123')
+  assert.equal(dialOf('XX'), '34')
+})
+test('splitE164 para editar', () => {
+  assert.deepEqual(splitE164(OK), { country: 'ES', number: '634513012' })
+  assert.deepEqual(splitE164('+351912345678'), { country: 'PT', number: '912345678' })
+  assert.deepEqual(splitE164('+12025550123'), { country: 'US', number: '2025550123' })
+  assert.deepEqual(splitE164('+999123456789'), { country: 'ES', number: '+999123456789' })
 })

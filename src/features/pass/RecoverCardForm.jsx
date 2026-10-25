@@ -1,8 +1,9 @@
 import { useRef, useState } from 'react'
 import { Alert } from '../../components/ui/Alert.jsx'
 import { Button } from '../../components/ui/Button.jsx'
+import { PhoneField } from '../../components/ui/PhoneField.jsx'
 import { TextField } from '../../components/ui/TextField.jsx'
-import { normalizePhone, stripSpanishPrefix } from '../../lib/phone.js'
+import { DEFAULT_COUNTRY, dialOf, normalizePhone, stripDialPrefix } from '../../lib/phone.js'
 import { ApiError, recoverCard } from '../../services/publicApi.js'
 import { useTurnstile } from '../enroll/useTurnstile.js'
 
@@ -17,7 +18,7 @@ const ERRORS = {
 
 /** Recupera la tarjeta con email + teléfono (los dos deben coincidir con el registro). */
 export function RecoverCardForm({ slug, onRecovered }) {
-  const [f, setF] = useState({ email: '', phone: '' })
+  const [f, setF] = useState({ email: '', phone: '', country: DEFAULT_COUNTRY })
   const [errors, setErrors] = useState({})
   const [busy, setBusy] = useState(false)
   const [banner, setBanner] = useState('')
@@ -33,7 +34,8 @@ export function RecoverCardForm({ slug, onRecovered }) {
     e.preventDefault()
     const errs = {}
     if (!EMAIL_RE.test(f.email.trim())) errs.email = 'Escribe el email con el que te registraste.'
-    if (!normalizePhone(f.phone)) errs.phone = 'Escribe el teléfono con el que te registraste.'
+    if (!normalizePhone(f.phone, dialOf(f.country)))
+      errs.phone = 'Escribe el teléfono con el que te registraste.'
     setErrors(errs)
     if (Object.keys(errs).length) return
     setBusy(true)
@@ -42,7 +44,7 @@ export function RecoverCardForm({ slug, onRecovered }) {
       const token = await recoverCard({
         slug,
         email: f.email.trim(),
-        phone: normalizePhone(f.phone),
+        phone: normalizePhone(f.phone, dialOf(f.country)),
         captcha_token: await getToken(),
       })
       onRecovered(token)
@@ -76,21 +78,16 @@ export function RecoverCardForm({ slug, onRecovered }) {
         onChange={(e) => set('email', e.target.value)}
         error={errors.email}
       />
-      <TextField
+      <PhoneField
         label="Teléfono móvil"
         required
         name="phone"
-        type="tel"
-        inputMode="tel"
-        autoComplete="tel"
-        placeholder="612 34 56 78"
-        prefix={
-          <span>
-            <span aria-hidden="true">🇪🇸</span> +34
-          </span>
-        }
+        autoComplete="tel-national"
+        placeholder={f.country === 'ES' ? '612 34 56 78' : undefined}
+        country={f.country}
+        onCountryChange={(c) => set('country', c)}
         value={f.phone}
-        onChange={(e) => set('phone', stripSpanishPrefix(e.target.value))}
+        onChange={(e) => set('phone', stripDialPrefix(e.target.value, dialOf(f.country)))}
         error={errors.phone}
       />
       <div ref={tsRef} />

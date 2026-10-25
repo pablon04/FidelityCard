@@ -27,6 +27,7 @@ export const es = {
     emailBad: 'Revisa el email: parece que falta algo, como "@correo.com".',
     phoneEmpty: 'Escribe tu móvil.',
     phoneBad: 'Revisa el móvil: debe tener 9 cifras (por ejemplo, 612 34 56 78).',
+    phoneBadIntl: 'Revisa el móvil y el prefijo del país.',
     terms: 'Necesitamos tu aceptación para crear la tarjeta.',
     summary: (n) => `Hay ${n} ${n === 1 ? 'campo' : 'campos'} por revisar.`,
     offline: 'Sin conexión. Conéctate a internet y vuelve a intentarlo.',

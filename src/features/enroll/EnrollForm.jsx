@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { Alert } from '../../components/ui/Alert.jsx'
 import { Button } from '../../components/ui/Button.jsx'
 import { Checkbox } from '../../components/ui/Checkbox.jsx'
+import { PhoneField } from '../../components/ui/PhoneField.jsx'
 import { TextField } from '../../components/ui/TextField.jsx'
-import { normalizePhone, stripSpanishPrefix } from '../../lib/phone.js'
+import { DEFAULT_COUNTRY, dialOf, normalizePhone, stripDialPrefix } from '../../lib/phone.js'
 import { suggestEmail } from '../../lib/format.js'
 import { enrollCustomer, ApiError } from '../../services/publicApi.js'
 import { es } from '../../i18n/es.js'
@@ -19,7 +20,8 @@ function validate(f) {
   if (!f.email.trim()) e.email = es.errors.emailEmpty
   else if (!EMAIL_RE.test(f.email.trim())) e.email = es.errors.emailBad
   if (!f.phone.trim()) e.phone = es.errors.phoneEmpty
-  else if (!normalizePhone(f.phone)) e.phone = es.errors.phoneBad
+  else if (!normalizePhone(f.phone, dialOf(f.country)))
+    e.phone = f.country === 'ES' ? es.errors.phoneBad : es.errors.phoneBadIntl
   if (!f.terms) e.terms = es.errors.terms
   return e
 }
@@ -31,6 +33,7 @@ export function EnrollForm({ merchant, slug, source, onDone, onOpenPrivacy, onRe
     name: '',
     email: '',
     phone: '',
+    country: DEFAULT_COUNTRY,
     terms: false,
     marketing: false,
     website: '',
@@ -90,7 +93,7 @@ export function EnrollForm({ merchant, slug, source, onDone, onOpenPrivacy, onRe
         slug,
         full_name: f.name.trim(),
         email: f.email.trim(),
-        phone: normalizePhone(f.phone),
+        phone: normalizePhone(f.phone, dialOf(f.country)),
         consent: true,
         consent_version: consents.terms_privacy?.version,
         marketing_opt_in: f.marketing,
@@ -177,21 +180,16 @@ export function EnrollForm({ merchant, slug, source, onDone, onOpenPrivacy, onRe
             </p>
           )}
         </TextField>
-        <TextField
+        <PhoneField
           label="Teléfono móvil"
           required
           name="phone"
-          type="tel"
-          inputMode="tel"
-          autoComplete="tel"
-          placeholder="612 34 56 78"
-          prefix={
-            <span>
-              <span aria-hidden="true">🇪🇸</span> +34
-            </span>
-          }
+          autoComplete="tel-national"
+          placeholder={f.country === 'ES' ? '612 34 56 78' : undefined}
+          country={f.country}
+          onCountryChange={(c) => set('country', c)}
           value={f.phone}
-          onChange={(e) => set('phone', stripSpanishPrefix(e.target.value))}
+          onChange={(e) => set('phone', stripDialPrefix(e.target.value, dialOf(f.country)))}
           onBlur={() => onBlur('phone')}
           error={errors.phone}
           {...ro}

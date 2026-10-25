@@ -4,8 +4,8 @@ import { Alert } from '../../components/ui/Alert.jsx'
 import { Button } from '../../components/ui/Button.jsx'
 import { Sheet } from '../../components/ui/Sheet.jsx'
 import { Skeleton } from '../../components/ui/Skeleton.jsx'
-import { TextField } from '../../components/ui/TextField.jsx'
-import { normalizePhone, stripSpanishPrefix } from '../../lib/phone.js'
+import { PhoneField } from '../../components/ui/PhoneField.jsx'
+import { dialOf, normalizePhone, splitE164, stripDialPrefix } from '../../lib/phone.js'
 import { getCustomerDetail, updateCustomerPhone } from '../../services/customersService.js'
 import { useMerchant } from '../merchant/merchantCtx.js'
 
@@ -38,19 +38,22 @@ const PHONE_ERRORS = {
 /** Dialogo para cambiar el telefono (cliente que cambio de numero). */
 function PhoneDialog({ open, customer, onClose, onSaved }) {
   const [phone, setPhone] = useState('')
+  const [country, setCountry] = useState('ES')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
     if (!open) return
+    const cur = splitE164(customer.phone)
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setPhone(stripSpanishPrefix(customer.phone))
+    setCountry(cur.country)
+    setPhone(cur.number)
     setError('')
   }, [open, customer.phone])
 
   const save = async (e) => {
     e.preventDefault()
-    const e164 = normalizePhone(phone)
+    const e164 = normalizePhone(phone, dialOf(country))
     if (!e164) return setError('Escribe un teléfono válido.')
     if (e164 === customer.phone) return onClose()
     setBusy(true)
@@ -71,21 +74,19 @@ function PhoneDialog({ open, customer, onClose, onSaved }) {
           Úsalo si {customer.name} ha cambiado de número. Con el nuevo teléfono y su email podrá
           recuperar su tarjeta en otro móvil.
         </p>
-        <TextField
+        <PhoneField
           label="Nuevo teléfono"
           required
           name="phone"
-          type="tel"
-          inputMode="tel"
           autoComplete="off"
-          prefix={
-            <span>
-              <span aria-hidden="true">🇪🇸</span> +34
-            </span>
-          }
+          country={country}
+          onCountryChange={(c) => {
+            setCountry(c)
+            setError('')
+          }}
           value={phone}
           onChange={(e) => {
-            setPhone(stripSpanishPrefix(e.target.value))
+            setPhone(stripDialPrefix(e.target.value, dialOf(country)))
             setError('')
           }}
           error={error}
