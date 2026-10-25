@@ -60,8 +60,29 @@ export const objectId = (issuerId, publicId) => `${issuerId}.${publicId}`
 const text = (value) => ({ defaultValue: { language: 'es', value } })
 const image = (uri, alt) => ({ sourceUri: { uri }, contentDescription: text(alt) })
 
+/** Enlace a Google Maps: coordenadas si hay, si no la direccion. */
+export function mapsUrl({ address, latitude, longitude }) {
+  const q =
+    Number.isFinite(latitude) && Number.isFinite(longitude) ? `${latitude},${longitude}` : address
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`
+}
+
 /**
- * @param {{issuerId:string, merchantId:string, merchantName:string, cardName:string, color:string, logoUrl:string}} p
+ * Direccion + "Como llegar" en la clase (todos los pases del comercio).
+ * undefined => no tocar (PATCH sin estos campos); null => borrar lo que hubiera.
+ */
+function locationModules(location) {
+  if (location === undefined) return {}
+  if (!location?.address) return { textModulesData: [], linksModuleData: { uris: [] } }
+  return {
+    textModulesData: [{ id: 'address', header: 'Dirección', body: location.address }],
+    linksModuleData: { uris: [{ id: 'maps', uri: mapsUrl(location), description: 'Cómo llegar' }] },
+  }
+}
+
+/**
+ * @param {{issuerId:string, merchantId:string, merchantName:string, cardName:string, color:string, logoUrl:string,
+ *   location?: {address:string, latitude:number|null, longitude:number|null}|null}} p
  */
 export function buildLoyaltyClass(p) {
   return {
@@ -72,6 +93,7 @@ export function buildLoyaltyClass(p) {
     hexBackgroundColor: p.color,
     reviewStatus: 'UNDER_REVIEW',
     countryCode: 'ES',
+    ...locationModules(p.location),
   }
 }
 

@@ -108,7 +108,11 @@ export async function handle(req) {
         .select('type, threshold, reward_description, card_name, brand_color, logo_path')
         .eq('id', card.program_id)
         .maybeSingle(),
-      supabase.from('merchants').select('name').eq('id', card.merchant_id).maybeSingle(),
+      supabase
+        .from('merchants')
+        .select('name, address, latitude, longitude')
+        .eq('id', card.merchant_id)
+        .maybeSingle(),
     ])
     if (cust.error || prog.error || merch.error || !cust.data || !prog.data || !merch.data) {
       log(requestId, 'db_error', { step: 'details' })
@@ -154,6 +158,7 @@ export async function handle(req) {
       cardName: prog.data.card_name,
       color: prog.data.brand_color,
       logoUrl: logo,
+      location: merch.data,
     })
     const obj = buildLoyaltyObject({
       issuerId,

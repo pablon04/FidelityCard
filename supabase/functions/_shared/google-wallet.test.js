@@ -190,3 +190,29 @@ Deno.test('ensureResource: 200, 409->PATCH, error', async () => {
     reason: 'object_google_http_403',
   })
 })
+Deno.test('clase: direccion y enlace a Maps', () => {
+  const base = {
+    issuerId: '3388',
+    merchantId: M,
+    merchantName: 'Cafe Luna',
+    cardName: 'Tarjeta',
+    color: '#7a3b1e',
+    logoUrl: 'https://x/l.png',
+  }
+  const c = buildLoyaltyClass({
+    ...base,
+    location: { address: 'Calle Mayor 1, Madrid', latitude: 40.4, longitude: -3.7 },
+  })
+  assertEquals(c.textModulesData[0].body, 'Calle Mayor 1, Madrid')
+  assertEquals(
+    c.linksModuleData.uris[0].uri,
+    'https://www.google.com/maps/search/?api=1&query=40.4%2C-3.7',
+  )
+  const sinCoords = buildLoyaltyClass({
+    ...base,
+    location: { address: 'Calle Mayor 1', latitude: null, longitude: null },
+  })
+  assert(sinCoords.linksModuleData.uris[0].uri.endsWith('query=Calle%20Mayor%201'))
+  assertEquals(buildLoyaltyClass({ ...base, location: null }).linksModuleData, { uris: [] })
+  assert(!('textModulesData' in buildLoyaltyClass(base))) // undefined: no se toca
+})

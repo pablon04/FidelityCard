@@ -1,7 +1,7 @@
 // Edge Function: wallet-sync-class  (POST, requiere sesion de comercio; verify_jwt=false y se
 // valida aqui el JWT del usuario para poder responder al preflight CORS).
 // Tras guardar la tarjeta en el panel, empuja nombre, color y logo a la clase de Google Wallet:
-// cambia en todos los pases ya guardados a la vez. Recompensa y umbral se actualizan en cada
+// cambia en todos los pases ya guardados a la vez. Tambien la direccion + "Como llegar" (SQL 0009). Recompensa y umbral se actualizan en cada
 // visita (card-action). Autorizacion: RLS con el JWT del usuario (solo ve sus programas).
 // Logs: solo request_id y resultado. Sin claves ni PII.
 import { createClient } from 'npm:@supabase/supabase-js@2'
@@ -70,7 +70,9 @@ export async function handle(req) {
     // RLS: solo programas activos de comercios de este usuario.
     const { data: progs, error: pe } = await userDb
       .from('loyalty_programs')
-      .select('merchant_id, card_name, brand_color, logo_path, merchants(name)')
+      .select(
+        'merchant_id, card_name, brand_color, logo_path, merchants(name, address, latitude, longitude)',
+      )
       .eq('status', 'active')
     if (pe) {
       log(requestId, 'db_error', { pg_code: pe.code })
@@ -109,6 +111,7 @@ export async function handle(req) {
         cardName: p.card_name,
         color: p.brand_color,
         logoUrl: logoUrl(url ?? '', p.logo_path) ?? fallbackLogo,
+        location: p.merchants ?? null,
       })
       const r = await patchLoyaltyClass({ cls, token: auth.token, fetchImpl: fetch })
       log(requestId, 'wallet_class_sync', r)
