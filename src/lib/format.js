@@ -59,3 +59,10 @@ export function suggestEmail(email) {
   const fix = TYPOS[m[2]]
   return fix ? `${m[1]}@${fix}` : null
 }
+
+/** Enlace a Google Maps (abre la app en Android/iOS): coordenadas si hay, si no la direccion. */
+export function mapsUrl({ address, latitude, longitude } = {}) {
+  const q =
+    Number.isFinite(latitude) && Number.isFinite(longitude) ? `${latitude},${longitude}` : address
+  return q ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}` : null
+}

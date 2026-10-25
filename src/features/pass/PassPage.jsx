@@ -5,7 +5,7 @@ import { Button } from '../../components/ui/Button.jsx'
 import { PassCard } from '../../components/ui/PassCard.jsx'
 import { Skeleton } from '../../components/ui/Skeleton.jsx'
 import { env } from '../../lib/env.js'
-import { logoUrl } from '../../lib/format.js'
+import { logoUrl, mapsUrl } from '../../lib/format.js'
 import { GoogleWalletButton } from '../enroll/GoogleWalletButton.jsx'
 import { detectPlatform } from '../../lib/platform.js'
 import { getPublicPass } from '../../services/publicApi.js'
@@ -98,6 +98,20 @@ function PassView({ pass }) {
           {detectPlatform() === 'ios' && (
             <p className="text-center text-sm text-text-muted">Apple Wallet llegará pronto.</p>
           )}
+        </div>
+      )}
+      {pass.location?.address && (
+        <div className="mt-4 w-full max-w-sm rounded-card border border-border-subtle p-3 text-sm">
+          <p className="font-medium">Dónde estamos</p>
+          <p className="text-text-muted">{pass.location.address}</p>
+          <a
+            href={mapsUrl(pass.location)}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-1 inline-flex min-h-[44px] items-center font-semibold text-primary"
+          >
+            Cómo llegar
+          </a>
         </div>
       )}
       <p className="mt-4 max-w-sm text-center text-sm text-text-muted">

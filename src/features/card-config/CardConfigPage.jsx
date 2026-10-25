@@ -7,14 +7,16 @@ import { Sheet } from '../../components/ui/Sheet.jsx'
 import { TextField } from '../../components/ui/TextField.jsx'
 import { isHex, isLowContrast } from '../../lib/contrast.js'
 import { env } from '../../lib/env.js'
-import { logoUrl } from '../../lib/format.js'
+import { logoUrl, mapsUrl } from '../../lib/format.js'
 import {
   LOGO_TYPES,
   activateProgram,
   countProgramCards,
+  geocodeAddress,
   saveProgram,
   syncWalletCard,
   updateMerchantLegal,
+  updateMerchantLocation,
   uploadLogo,
 } from '../../services/merchantService.js'
 import { useMerchant } from '../merchant/merchantCtx.js'
@@ -34,6 +36,9 @@ function initial(merchant, program) {
     legal_name: merchant.legal_name ?? '',
     tax_id: merchant.tax_id ?? '',
     privacy_email: merchant.privacy_email ?? '',
+    address: merchant.address ?? '',
+    latitude: merchant.latitude ?? null,
+    longitude: merchant.longitude ?? null,
   }
 }
 
@@ -58,6 +63,8 @@ function validate(v, forActivate) {
   const r = v.reward_description.trim().length
   if (r < 3 || r > 60)
     e.reward_description = 'Escribe qué recibirá tu cliente (entre 3 y 60 caracteres).'
+  const a = v.address.trim().length
+  if (a && (a < 5 || a > 200)) e.address = 'Escribe una dirección de entre 5 y 200 caracteres.'
   if (v.privacy_email.trim() && !EMAIL_RE.test(v.privacy_email.trim()))
     e.privacy_email = 'Revisa el email de contacto.'
   if (forActivate) {
@@ -81,6 +88,7 @@ export default function CardConfigPage() {
   const [hasCustomers, setHasCustomers] = useState(false)
   const [logoBusy, setLogoBusy] = useState(false)
   const [logoError, setLogoError] = useState('')
+  const [geo, setGeo] = useState({ busy: false, text: '', tone: 'muted' })
   const formRef = useRef(null)
   const dirty = useMemo(() => JSON.stringify(v) !== saved, [v, saved])
   const active = program?.status === 'active'
@@ -128,11 +136,68 @@ export default function CardConfigPage() {
     }
   }
 
+  const setCoords = (latitude, longitude) => setV((p) => ({ ...p, latitude, longitude }))
+
+  const onGeocode = async () => {
+    if (v.address.trim().length < 5)
+      return setErrors((p) => ({ ...p, address: 'Escribe primero la dirección completa.' }))
+    setGeo({ busy: true, text: '', tone: 'muted' })
+    try {
+      const hit = await geocodeAddress(v.address)
+      if (!hit) {
+        setCoords(null, null)
+        return setGeo({
+          busy: false,
+          tone: 'warning',
+          text: 'No encontramos esa dirección. Añade calle, número, ciudad y código postal, o usa tu ubicación actual.',
+        })
+      }
+      setCoords(hit.latitude, hit.longitude)
+      setGeo({ busy: false, tone: 'muted', text: `Encontrada: ${hit.label}` })
+    } catch {
+      setGeo({
+        busy: false,
+        tone: 'warning',
+        text: 'No hemos podido buscar la dirección. Inténtalo de nuevo.',
+      })
+    }
+  }
+
+  const onMyLocation = () => {
+    if (!navigator.geolocation)
+      return setGeo({
+        busy: false,
+        tone: 'warning',
+        text: 'Tu navegador no permite obtener la ubicación.',
+      })
+    setGeo({ busy: true, text: '', tone: 'muted' })
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        setCoords(Number(coords.latitude.toFixed(6)), Number(coords.longitude.toFixed(6)))
+        setGeo({
+          busy: false,
+          tone: 'muted',
+          text: 'Ubicación actual guardada como la de tu negocio.',
+        })
+      },
+      () =>
+        setGeo({
+          busy: false,
+          tone: 'warning',
+          text: 'No hemos podido obtener tu ubicación. Revisa los permisos del navegador.',
+        }),
+      { enableHighAccuracy: true, timeout: 15000 },
+    )
+  }
+
+  const hasCoords = Number.isFinite(v.latitude) && Number.isFinite(v.longitude)
+
   const persist = async (activate) => {
     setBusy(true)
     setMsg(null)
     try {
       await updateMerchantLegal(merchant.id, v)
+      await updateMerchantLocation(merchant.id, v)
       let p = await saveProgram(merchant.id, program, v)
       if (activate && p.status !== 'active') p = await activateProgram(p.id)
       if (p.status === 'active') syncWalletCard() // nombre/color/logo a los pases ya guardados
@@ -316,6 +381,52 @@ export default function CardConfigPage() {
               {lowContrast && (
                 <p role="status" className="mt-1 text-sm text-warning">
                   Este color es muy claro y se leerá mal. Hemos ajustado el texto a negro.
+                </p>
+              )}
+            </div>
+            <div>
+              <TextField
+                name="address"
+                label="Dirección del negocio (opcional)"
+                placeholder="Calle Mayor 12, 28013 Madrid"
+                value={v.address}
+                onChange={(e) => {
+                  set('address', e.target.value)
+                  if (hasCoords) setCoords(null, null) // coordenadas viejas ya no valen
+                  setGeo({ busy: false, text: '', tone: 'muted' })
+                }}
+                error={errors.address}
+                autoComplete="street-address"
+                maxLength={200}
+                help="Tus clientes la verán en su tarjeta con un enlace para llegar."
+              />
+              <div className="mt-2 flex flex-wrap items-center gap-3">
+                <Button variant="secondary" onClick={onGeocode} disabled={geo.busy}>
+                  {geo.busy ? 'Buscando…' : 'Localizar en el mapa'}
+                </Button>
+                <Button variant="link" onClick={onMyLocation} disabled={geo.busy}>
+                  Estoy en el local: usar mi ubicación
+                </Button>
+              </div>
+              {geo.text && (
+                <p
+                  role="status"
+                  className={`mt-1 text-sm ${geo.tone === 'warning' ? 'text-warning' : 'text-text-muted'}`}
+                >
+                  {geo.text}
+                </p>
+              )}
+              {hasCoords && (
+                <p className="mt-1 text-sm text-text-muted">
+                  Ubicación lista.{' '}
+                  <a
+                    href={mapsUrl(v)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-medium text-primary underline"
+                  >
+                    Comprobar en Google Maps
+                  </a>
                 </p>
               )}
             </div>

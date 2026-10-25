@@ -7,7 +7,8 @@ import { env } from '../lib/env.js'
 import { supabase } from '../lib/supabase.js'
 import { randomSuffix, slugify } from '../lib/format.js'
 
-const MERCHANT_COLS = 'id, slug, name, legal_name, tax_id, privacy_email'
+const MERCHANT_COLS =
+  'id, slug, name, legal_name, tax_id, privacy_email, address, latitude, longitude'
 
 export async function getMyMerchant() {
   const { data, error } = await supabase
@@ -67,6 +68,40 @@ export async function updateMerchantLegal(merchantId, { legal_name, tax_id, priv
     })
     .eq('id', merchantId)
   if (error) throw error
+}
+
+/** Direccion + coordenadas (ambas o ninguna; ver SQL 0009). */
+export async function updateMerchantLocation(merchantId, { address, latitude, longitude }) {
+  const hasCoords = Number.isFinite(latitude) && Number.isFinite(longitude)
+  const { error } = await supabase
+    .from('merchants')
+    .update({
+      address: address?.trim() || null,
+      latitude: hasCoords ? latitude : null,
+      longitude: hasCoords ? longitude : null,
+    })
+    .eq('id', merchantId)
+  if (error) throw error
+}
+
+/**
+ * Busca coordenadas de una direccion con Nominatim (OpenStreetMap, gratis, max 1 peticion/s).
+ * @returns {Promise<{latitude:number, longitude:number, label:string}|null>}
+ */
+export async function geocodeAddress(address) {
+  const url = new URL('https://nominatim.openstreetmap.org/search')
+  url.search = new URLSearchParams({
+    q: address.trim(),
+    format: 'jsonv2',
+    limit: '1',
+    countrycodes: 'es',
+    'accept-language': 'es',
+  })
+  const res = await fetch(url, { headers: { Accept: 'application/json' } })
+  if (!res.ok) throw new Error('geocode_failed')
+  const [hit] = await res.json()
+  if (!hit) return null
+  return { latitude: Number(hit.lat), longitude: Number(hit.lon), label: hit.display_name }
 }
 
 /** Inserta o actualiza el programa. `values` ya validado. */
