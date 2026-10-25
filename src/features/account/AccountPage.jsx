@@ -1,13 +1,24 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Building2, Crown, MapPin, Scale } from 'lucide-react'
+import { Building2, CheckCircle2, Crown, MapPin, Scale } from 'lucide-react'
 import { Alert } from '../../components/ui/Alert.jsx'
 import { Button } from '../../components/ui/Button.jsx'
+import { PhoneField } from '../../components/ui/PhoneField.jsx'
+import { Sheet } from '../../components/ui/Sheet.jsx'
 import { TextField } from '../../components/ui/TextField.jsx'
 import { publicBase } from '../../lib/env.js'
 import { mapsUrl } from '../../lib/format.js'
 import {
+  DEFAULT_COUNTRY,
+  dialOf,
+  normalizePhone,
+  splitE164,
+  stripDialPrefix,
+} from '../../lib/phone.js'
+import {
   PLANS,
   geocodeAddress,
+  getOpenPlanRequest,
+  requestPlanChange,
   syncWalletCard,
   updateMerchantAccount,
 } from '../../services/merchantService.js'
@@ -15,20 +26,27 @@ import { useMerchant } from '../merchant/merchantCtx.js'
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
 
-const initial = (m) => ({
-  name: m.name ?? '',
-  legal_name: m.legal_name ?? '',
-  tax_id: m.tax_id ?? '',
-  privacy_email: m.privacy_email ?? '',
-  address: m.address ?? '',
-  latitude: m.latitude ?? null,
-  longitude: m.longitude ?? null,
-})
+const initial = (m) => {
+  const phone = m.contact_phone ? splitE164(m.contact_phone) : null
+  return {
+    name: m.name ?? '',
+    phone: phone?.number ?? '',
+    phone_country: phone?.country ?? DEFAULT_COUNTRY,
+    legal_name: m.legal_name ?? '',
+    tax_id: m.tax_id ?? '',
+    privacy_email: m.privacy_email ?? '',
+    address: m.address ?? '',
+    latitude: m.latitude ?? null,
+    longitude: m.longitude ?? null,
+  }
+}
 
 function validate(v) {
   const e = {}
   const n = v.name.trim().length
   if (n < 1 || n > 80) e.name = 'Escribe el nombre de tu negocio (máximo 80 caracteres).'
+  if (v.phone.trim() && !normalizePhone(v.phone, dialOf(v.phone_country)))
+    e.phone = 'Revisa el teléfono y el prefijo del país.'
   if (v.privacy_email.trim() && !EMAIL_RE.test(v.privacy_email.trim()))
     e.privacy_email = 'Revisa el email de contacto.'
   const a = v.address.trim().length
@@ -62,6 +80,25 @@ export default function AccountPage() {
   const dirty = useMemo(() => JSON.stringify(v) !== saved, [v, saved])
   const hasCoords = Number.isFinite(v.latitude) && Number.isFinite(v.longitude)
   const legalReady = !!(merchant.legal_name?.trim() && merchant.privacy_email?.trim())
+  // Contratar plan: ventana con confirmacion; la solicitud la atiende el equipo en /admin.
+  const [planDialog, setPlanDialog] = useState(null) // { key, step: 'ask' | 'busy' | 'done' | 'error' }
+  const [openRequest, setOpenRequest] = useState(null)
+
+  useEffect(() => {
+    getOpenPlanRequest(merchant.id)
+      .then(setOpenRequest)
+      .catch(() => {})
+  }, [merchant.id])
+
+  const hirePlan = async () => {
+    setPlanDialog((d) => ({ ...d, step: 'busy' }))
+    try {
+      setOpenRequest(await requestPlanChange(planDialog.key))
+      setPlanDialog((d) => ({ ...d, step: 'done' }))
+    } catch {
+      setPlanDialog((d) => ({ ...d, step: 'error' }))
+    }
+  }
 
   useEffect(() => {
     document.title = 'Cuenta · FidelityCard'
@@ -145,7 +182,10 @@ export default function AccountPage() {
     setBusy(true)
     setMsg(null)
     try {
-      await updateMerchantAccount(merchant.id, v)
+      await updateMerchantAccount(merchant.id, {
+        ...v,
+        contact_phone: v.phone.trim() ? normalizePhone(v.phone, dialOf(v.phone_country)) : null,
+      })
       syncWalletCard() // nombre del negocio y direccion a los pases ya guardados en Wallet
       await refresh()
       setSaved(JSON.stringify(v))
@@ -185,6 +225,17 @@ export default function AccountPage() {
             maxLength={80}
             autoComplete="organization"
             help="Aparece en la página de alta y como emisor en Google Wallet."
+          />
+          <PhoneField
+            name="phone"
+            label="Teléfono de contacto (opcional)"
+            autoComplete="tel-national"
+            country={v.phone_country}
+            onCountryChange={(c) => set('phone_country', c)}
+            value={v.phone}
+            onChange={(e) => set('phone', stripDialPrefix(e.target.value, dialOf(v.phone_country)))}
+            error={errors.phone}
+            help="Solo para que el equipo de FidelityCard pueda contactarte. Tus clientes no lo ven."
           />
           <div>
             <p className="mb-1.5 text-sm font-medium">Enlace de tu negocio</p>
@@ -294,11 +345,9 @@ export default function AccountPage() {
         <ul className="grid gap-3 sm:grid-cols-3">
           {Object.entries(PLANS).map(([key, p]) => {
             const current = p === plan
-            return (
-              <li
-                key={key}
-                className={`rounded-card p-3 ${current ? 'border-2 border-primary' : 'border border-border-subtle'}`}
-              >
+            const requested = openRequest?.requested_plan === key
+            const body = (
+              <>
                 <p className="font-semibold">
                   {p.name}
                   {current && <span className="ml-2 text-sm font-normal text-primary">Actual</span>}
@@ -306,14 +355,79 @@ export default function AccountPage() {
                 <p className="text-sm text-text-muted">
                   Hasta {p.cards} {p.cards === 1 ? 'tarjeta' : 'tarjetas'}
                 </p>
+                {!current && (
+                  <p className="mt-2 text-sm font-medium text-primary">
+                    {requested ? 'Solicitud enviada' : 'Contratar este plan →'}
+                  </p>
+                )}
+              </>
+            )
+            return (
+              <li key={key}>
+                {current ? (
+                  <div className="h-full rounded-card border-2 border-primary p-3">{body}</div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setPlanDialog({ key, step: 'ask' })}
+                    className="h-full w-full cursor-pointer rounded-card border border-border-subtle p-3 text-left transition hover:-translate-y-0.5 hover:border-primary hover:shadow-card focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                  >
+                    {body}
+                  </button>
+                )}
               </li>
             )
           })}
         </ul>
-        <p className="text-sm text-text-muted">
-          ¿Necesitas más tarjetas? Escríbenos y te cambiamos de plan.
-        </p>
+        {openRequest && (
+          <p className="text-sm text-text-muted">
+            Has pedido el plan {PLANS[openRequest.requested_plan]?.name}. Nos pondremos en contacto
+            contigo lo antes posible.
+          </p>
+        )}
       </Section>
+      <Sheet
+        variant="dialog"
+        open={!!planDialog}
+        onClose={() => setPlanDialog(null)}
+        title={
+          planDialog?.step === 'done' ? '¡Perfecto!' : `Plan ${PLANS[planDialog?.key]?.name ?? ''}`
+        }
+      >
+        {planDialog?.step === 'done' ? (
+          <div className="space-y-4">
+            <p className="flex items-start gap-2">
+              <CheckCircle2 aria-hidden="true" size={22} className="mt-0.5 shrink-0 text-success" />
+              <span>
+                Hemos recibido tu solicitud del plan {PLANS[planDialog.key].name}. Se pondrán en
+                contacto contigo lo antes posible.
+              </span>
+            </p>
+            <Button onClick={() => setPlanDialog(null)}>Cerrar</Button>
+          </div>
+        ) : (
+          planDialog && (
+            <div className="space-y-4">
+              <p>
+                ¿Quieres contratar el plan <strong>{PLANS[planDialog.key].name}</strong>? Incluye
+                hasta {PLANS[planDialog.key].cards}{' '}
+                {PLANS[planDialog.key].cards === 1 ? 'tarjeta' : 'tarjetas'}.
+              </p>
+              {planDialog.step === 'error' && (
+                <Alert tone="error">No hemos podido enviar la solicitud. Inténtalo de nuevo.</Alert>
+              )}
+              <div className="flex flex-wrap gap-3">
+                <Button onClick={hirePlan} loading={planDialog.step === 'busy'}>
+                  Contratar este plan
+                </Button>
+                <Button variant="secondary" onClick={() => setPlanDialog(null)}>
+                  Cancelar
+                </Button>
+              </div>
+            </div>
+          )
+        )}
+      </Sheet>
     </main>
   )
 }

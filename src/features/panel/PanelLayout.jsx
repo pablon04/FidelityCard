@@ -11,6 +11,7 @@ import {
 import { NavLink, Outlet, useNavigate } from 'react-router'
 import { Navigate } from 'react-router'
 import { signOut } from '../../services/authService.js'
+import { PendingApproval } from '../merchant/PendingApproval.jsx'
 import { useMerchant } from '../merchant/merchantCtx.js'
 
 const THEMES = [
@@ -60,7 +61,7 @@ const tabCls = ({ isActive }) =>
   }`
 
 export default function PanelLayout() {
-  const { merchant, plan } = useMerchant()
+  const { merchant, plan, refresh } = useMerchant()
   const navigate = useNavigate()
   const [theme, setTheme] = useTheme()
   if (!merchant) return <Navigate to="/app/onboarding" replace />
@@ -69,6 +70,8 @@ export default function PanelLayout() {
     await signOut()
     navigate('/app/login', { replace: true })
   }
+  if (merchant.approval_status !== 'approved')
+    return <PendingApproval merchant={merchant} onRefresh={refresh} onSignOut={out} />
 
   const themeSelect = (
     <label className="block text-sm">

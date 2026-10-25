@@ -8,7 +8,7 @@ import { supabase } from '../lib/supabase.js'
 import { randomSuffix, slugify } from '../lib/format.js'
 
 const MERCHANT_COLS =
-  'id, slug, name, legal_name, tax_id, privacy_email, address, latitude, longitude, plan'
+  'id, slug, name, legal_name, tax_id, privacy_email, address, latitude, longitude, plan, approval_status, contact_phone'
 
 export async function getMyMerchant() {
   const { data, error } = await supabase
@@ -34,6 +34,25 @@ export async function getMyPrograms(merchantId) {
     .select('*')
     .eq('merchant_id', merchantId)
     .order('created_at', { ascending: true })
+  if (error) throw error
+  return data
+}
+
+/** Solicitud de cambio de plan abierta (pending/contacted) o null. */
+export async function getOpenPlanRequest(merchantId) {
+  const { data, error } = await supabase
+    .from('plan_requests')
+    .select('id, requested_plan, status, created_at')
+    .eq('merchant_id', merchantId)
+    .in('status', ['pending', 'contacted'])
+    .maybeSingle()
+  if (error) throw error
+  return data
+}
+
+/** "Contratar este plan": deja la solicitud para que el equipo contacte (RPC request_plan_change). */
+export async function requestPlanChange(plan) {
+  const { data, error } = await supabase.rpc('request_plan_change', { p_plan: plan })
   if (error) throw error
   return data
 }
@@ -110,6 +129,7 @@ export async function updateMerchantAccount(merchantId, v) {
       name: v.name.trim(),
       legal_name: v.legal_name?.trim() || null,
       tax_id: v.tax_id?.trim() || null,
+      contact_phone: v.contact_phone || null,
       privacy_email: v.privacy_email?.trim() || null,
       address: v.address?.trim() || null,
       latitude: hasCoords ? v.latitude : null,

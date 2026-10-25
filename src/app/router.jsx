@@ -18,6 +18,12 @@ const CardConfigPage = lazy(() => import('../features/card-config/CardConfigPage
 const ClientsPage = lazy(() => import('../features/clients/ClientsPage.jsx'))
 const CustomerDetailPage = lazy(() => import('../features/clients/CustomerDetailPage.jsx'))
 const PromotePage = lazy(() => import('../features/promote/PromotePage.jsx'))
+const RequireAdmin = lazy(() => import('../features/admin/RequireAdmin.jsx'))
+const AdminLayout = lazy(() => import('../features/admin/AdminLayout.jsx'))
+const AdminDashboard = lazy(() => import('../features/admin/AdminDashboard.jsx'))
+const AdminMerchants = lazy(() => import('../features/admin/AdminMerchants.jsx'))
+const AdminMerchantDetail = lazy(() => import('../features/admin/AdminMerchantDetail.jsx'))
+const AdminRequests = lazy(() => import('../features/admin/AdminRequests.jsx'))
 const SharePage = lazy(() => import('../features/share/SharePage.jsx'))
 
 const lz = (el) => <Suspense fallback={null}>{el}</Suspense>
@@ -50,6 +56,27 @@ export const router = createBrowserRouter([
               { path: 'clientes', element: lz(<ClientsPage />) },
               { path: 'promocionar', element: lz(<PromotePage />) },
               { path: 'clientes/:id', element: lz(<CustomerDetailPage />) },
+            ],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    // Solo equipo (platform_admins, SQL 0013). Comparte login y sesion con /app.
+    path: '/admin',
+    element: lz(<AppRoot />),
+    children: [
+      {
+        element: lz(<RequireAdmin />),
+        children: [
+          {
+            element: lz(<AdminLayout />),
+            children: [
+              { index: true, element: lz(<AdminDashboard />) },
+              { path: 'comercios', element: lz(<AdminMerchants />) },
+              { path: 'comercios/:id', element: lz(<AdminMerchantDetail />) },
+              { path: 'solicitudes', element: lz(<AdminRequests />) },
             ],
           },
         ],

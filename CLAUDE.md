@@ -34,6 +34,9 @@ Env: copiar `.env.example` a `.env.local`. Nunca commitear `.env*` ni secretos.
 - Cada tarjeta se identifica en enlaces con `?card=<loyalty_programs.code>`; `code` NULL = tarjeta principal (enlaces/NFC antiguos sin `?card`). `code` solo editable en borrador. Resolución: `app.resolve_program`.
 - Google Wallet: una clase por tarjeta (`loyalty_programs.wallet_class_key`; las previas a 0012 conservan `merchant_<id>`).
 - Panel: `/app` = Inicio (dashboard, RPC `merchant_dashboard`), `/app/tarjetas`, `/app/tarjetas/:id|nueva`. Iconos: `lucide-react`.
+- `/app/cuenta`: datos comunes del comercio (nombre, teléfono de contacto, legales, ubicación) y plan. El editor de tarjeta solo tiene nombre, logo, color, tipo, umbral y recompensa; el `code` del enlace se genera del nombre.
+- Autorización: comercios nuevos `merchants.approval_status = 'pending'`; sin `approved` no entran al panel, no activan tarjetas y sus enlaces públicos no resuelven. "Contratar este plan" crea `plan_requests` (RPC `request_plan_change`).
+- `/admin` (solo equipo): admins en `platform_admins` (alta manual por SQL). Todo por RPC `admin_*` SECURITY DEFINER con `app.assert_admin()`. Comparte login con `/app` (vuelve a `state.from`).
 
 ## Flags (todos apagados por defecto)
 `APPLE_ENABLED` / `WALLET_APPLE_ENABLED` / `VITE_APPLE_WALLET_ENABLED` (=false), `EMAIL_REISSUE_ENABLED` (=false), `GOOGLE_WALLET_ENABLED` (=false hasta Fase 4). Lista completa en `.env.example`.

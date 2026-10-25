@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, Navigate, useNavigate, useSearchParams } from 'react-router'
+import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router'
 import { Alert } from '../../components/ui/Alert.jsx'
 import { Button } from '../../components/ui/Button.jsx'
 import { TextField } from '../../components/ui/TextField.jsx'
@@ -14,6 +14,9 @@ export default function LoginPage() {
   const register = params.get('modo') === 'registro'
   const { session, loading } = useAuth()
   const navigate = useNavigate()
+  const loc = useLocation()
+  // Vuelta a la pagina protegida que pidio el login (p. ej. /admin); solo rutas propias.
+  const from = /^\/(app|admin)(\/|$)/.test(loc.state?.from ?? '') ? loc.state.from : '/app'
   const [f, setF] = useState({ business: '', email: '', password: '' })
   const [show, setShow] = useState(false)
   const [errors, setErrors] = useState({})
@@ -26,7 +29,7 @@ export default function LoginPage() {
     document.title = register ? 'Crear cuenta · FidelityCard' : 'Entrar · FidelityCard'
   }, [register])
 
-  if (!loading && session && !registering) return <Navigate to="/app" replace />
+  if (!loading && session && !registering) return <Navigate to={from} replace />
 
   const set = (k) => (e) => {
     setF((p) => ({ ...p, [k]: e.target.value }))
@@ -72,7 +75,7 @@ export default function LoginPage() {
         }
       } else {
         await signIn({ email: f.email.trim(), password: f.password })
-        navigate('/app', { replace: true })
+        navigate(from, { replace: true })
       }
     } catch (err) {
       setRegistering(false)
