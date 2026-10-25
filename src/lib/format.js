@@ -66,3 +66,15 @@ export function mapsUrl({ address, latitude, longitude } = {}) {
     Number.isFinite(latitude) && Number.isFinite(longitude) ? `${latitude},${longitude}` : address
   return q ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}` : null
 }
+
+/** Tarjeta del enlace (?card=); null = la principal del comercio. */
+export const cardParam = (params) => params.get('card')?.trim().toLowerCase() || null
+
+/** Clave de localStorage del pase de una tarjeta (la principal conserva la clave antigua). */
+export const passKey = (slug, card) => (card ? `fc:pass:${slug}:${card}` : `fc:pass:${slug}`)
+
+/** Anade ?card= a un enlace publico si la tarjeta no es la principal. */
+export function withCard(url, card, extra = {}) {
+  const q = new URLSearchParams({ ...(card ? { card } : {}), ...extra }).toString()
+  return q ? `${url}?${q}` : url
+}

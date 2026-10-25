@@ -28,7 +28,7 @@ function validate(f) {
 
 const ORDER = ['name', 'email', 'phone', 'terms']
 
-export function EnrollForm({ merchant, slug, source, onDone, onOpenPrivacy, onReload }) {
+export function EnrollForm({ merchant, slug, card, source, onDone, onOpenPrivacy, onReload }) {
   const [f, setF] = useState({
     name: '',
     email: '',
@@ -100,6 +100,7 @@ export function EnrollForm({ merchant, slug, source, onDone, onOpenPrivacy, onRe
         ...(f.marketing && { marketing_version: consents.marketing?.version }),
         captcha_token,
         source,
+        ...(card && { card }),
         website: f.website,
       })
       if (res.status === 'already_registered') {

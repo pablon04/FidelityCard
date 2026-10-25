@@ -10,6 +10,7 @@ import { verifyTurnstile } from '../_shared/turnstile.js'
 import { checkRateLimits, hashKey } from '../_shared/rate-limit.js'
 import { clientIp } from '../_shared/client-info.js'
 import { normalizePhone } from '../_shared/phone.js'
+import { CARD_RE } from '../_shared/validate.js'
 
 const SLUG_RE = /^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
@@ -56,11 +57,13 @@ export async function handle(req) {
     const slug = typeof body?.slug === 'string' ? body.slug.trim().toLowerCase() : ''
     const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : ''
     const phone = normalizePhone(body?.phone, 'ES')
+    const card = typeof body?.card === 'string' && body.card ? body.card.trim().toLowerCase() : null
     const captchaToken = typeof body?.captcha_token === 'string' ? body.captcha_token : ''
     const fields = {}
     if (!SLUG_RE.test(slug)) fields.slug = 'Enlace no valido.'
     if (email.length > 254 || !EMAIL_RE.test(email)) fields.email = 'Email no valido.'
     if (!phone.ok) fields.phone = 'Telefono no valido.'
+    if (card !== null && !CARD_RE.test(card)) fields.card = 'Tarjeta no valida.'
     if (captchaToken.length < 1 || captchaToken.length > 4096)
       fields.captcha_token = 'Verificacion requerida.'
     if (Object.keys(fields).length) return fail(400, 'validation_error', { fields })
@@ -95,6 +98,7 @@ export async function handle(req) {
       p_slug: slug,
       p_email: email,
       p_phone_e164: phone.e164,
+      p_card: card,
     })
     if (error) {
       log(requestId, 'db_error', { pg_code: error.code })

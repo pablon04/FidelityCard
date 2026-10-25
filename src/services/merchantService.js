@@ -8,7 +8,7 @@ import { supabase } from '../lib/supabase.js'
 import { randomSuffix, slugify } from '../lib/format.js'
 
 const MERCHANT_COLS =
-  'id, slug, name, legal_name, tax_id, privacy_email, address, latitude, longitude'
+  'id, slug, name, legal_name, tax_id, privacy_email, address, latitude, longitude, plan'
 
 export async function getMyMerchant() {
   const { data, error } = await supabase
@@ -20,17 +20,57 @@ export async function getMyMerchant() {
   return data
 }
 
-export async function getMyProgram(merchantId) {
+/** Planes (SQL 0012: plan_card_limit). Lo cambia el equipo cuando el comercio paga. */
+export const PLANS = {
+  basic: { name: 'Básico', cards: 1 },
+  pro: { name: 'Pro', cards: 3 },
+  premium: { name: 'Premium', cards: 10 },
+}
+
+/** Todas las tarjetas del comercio (incluidas archivadas), de la mas antigua a la mas nueva. */
+export async function getMyPrograms(merchantId) {
   const { data, error } = await supabase
     .from('loyalty_programs')
     .select('*')
     .eq('merchant_id', merchantId)
-    .neq('status', 'archived')
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
+    .order('created_at', { ascending: true })
   if (error) throw error
   return data
+}
+
+/** Metricas del Inicio (RPC merchant_dashboard, solo owner). */
+export async function getDashboard(merchantId) {
+  const { data, error } = await supabase.rpc('merchant_dashboard', { p_merchant_id: merchantId })
+  if (error) throw error
+  return data
+}
+
+/** Archiva una tarjeta: deja de admitir altas y visitas y libera hueco del plan. */
+export async function archiveProgram(programId) {
+  const { error } = await supabase
+    .from('loyalty_programs')
+    .update({ status: 'archived' })
+    .eq('id', programId)
+  if (error) throw error
+}
+
+/** Recupera una tarjeta archivada como borrador (cuenta para el limite del plan). */
+export async function restoreProgram(programId) {
+  const { error } = await supabase
+    .from('loyalty_programs')
+    .update({ status: 'draft' })
+    .eq('id', programId)
+  if (error) throw Object.assign(error, { code: programError(error) })
+}
+
+/** Codigo de error de negocio a partir del mensaje de Postgres. */
+function programError(error) {
+  const msg = error?.message || ''
+  if (/plan_limit/.test(msg)) return 'plan_limit'
+  if (/programs_merchant_code_uidx/.test(msg)) return 'code_taken'
+  if (/code_locked/.test(msg)) return 'code_locked'
+  if (/forbidden_or_not_found/.test(msg)) return 'forbidden'
+  return 'unknown'
 }
 
 export async function countProgramCards(programId) {
@@ -116,6 +156,8 @@ export async function saveProgram(merchantId, existing, values) {
     brand_color: values.brand_color,
     logo_path: values.logo_path || null,
   }
+  // El codigo del enlace solo se fija/cambia en borrador (despues va impreso en QR/NFC).
+  if (!existing || existing.status === 'draft') row.code = values.code || null
   if (existing) {
     const { data, error } = await supabase
       .from('loyalty_programs')
@@ -123,7 +165,7 @@ export async function saveProgram(merchantId, existing, values) {
       .eq('id', existing.id)
       .select('*')
       .single()
-    if (error) throw error
+    if (error) throw Object.assign(new Error(programError(error)), { code: programError(error) })
     return data
   }
   const { data, error } = await supabase
@@ -131,7 +173,7 @@ export async function saveProgram(merchantId, existing, values) {
     .insert({ ...row, merchant_id: merchantId, status: 'draft' })
     .select('*')
     .single()
-  if (error) throw error
+  if (error) throw Object.assign(new Error(programError(error)), { code: programError(error) })
   return data
 }
 
@@ -139,12 +181,7 @@ export async function saveProgram(merchantId, existing, values) {
 export async function activateProgram(programId) {
   const { data, error } = await supabase.rpc('activate_card', { p_card_id: programId })
   if (error) {
-    const msg = error.message || ''
-    const code = /type_locked/.test(msg)
-      ? 'type_locked'
-      : /forbidden_or_not_found/.test(msg)
-        ? 'forbidden'
-        : 'unknown'
+    const code = programError(error)
     throw Object.assign(new Error(code), { code })
   }
   return data

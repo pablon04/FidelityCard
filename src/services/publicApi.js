@@ -45,8 +45,8 @@ async function rpc(name, args) {
 }
 
 /** @returns {Promise<object|null>} comercio publico o null si no existe / inactivo */
-export async function getPublicMerchant(slug) {
-  const data = await rpc('get_public_merchant', { p_slug: slug })
+export async function getPublicMerchant(slug, card = null) {
+  const data = await rpc('get_public_merchant', { p_slug: slug, p_card: card })
   return data && typeof data === 'object' ? data : null
 }
 
@@ -124,11 +124,11 @@ export async function getGoogleSaveUrl(passToken) {
  * result: visit_added | reward_earned | cooldown | not_supported.
  * Errores {error:{code}}: invalid_token(400), not_found(404), rate_limited(429), internal(500).
  */
-export async function cardAction(slug, passToken) {
+export async function cardAction(slug, passToken, card = null) {
   const res = await request(`${env.supabaseUrl}/functions/v1/card-action`, {
     method: 'POST',
     headers: baseHeaders(),
-    body: JSON.stringify({ slug, pass_token: passToken }),
+    body: JSON.stringify({ slug, pass_token: passToken, ...(card && { card }) }),
   })
   let body = null
   try {

@@ -28,7 +28,7 @@ export default function OnboardingPage() {
     try {
       await createMerchant({ name })
       await refresh()
-      navigate('/app/card', { replace: true })
+      navigate('/app/tarjetas/nueva', { replace: true })
     } catch {
       setError('No hemos podido crear tu negocio. Inténtalo de nuevo.')
     } finally {

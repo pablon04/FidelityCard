@@ -9,7 +9,8 @@ const CardActionPage = lazy(() => import('../features/pass/CardActionPage.jsx'))
 const AppRoot = lazy(() => import('../features/auth/AppRoot.jsx'))
 const LoginPage = lazy(() => import('../features/auth/LoginPage.jsx'))
 const RequireAuth = lazy(() => import('../features/auth/RequireAuth.jsx'))
-const PanelHome = lazy(() => import('../features/panel/PanelHome.jsx'))
+const DashboardPage = lazy(() => import('../features/panel/DashboardPage.jsx'))
+const CardsPage = lazy(() => import('../features/card-config/CardsPage.jsx'))
 const PanelLayout = lazy(() => import('../features/panel/PanelLayout.jsx'))
 const OnboardingPage = lazy(() => import('../features/merchant/OnboardingPage.jsx'))
 const CardConfigPage = lazy(() => import('../features/card-config/CardConfigPage.jsx'))
@@ -34,12 +35,15 @@ export const router = createBrowserRouter([
       {
         element: lz(<RequireAuth />),
         children: [
-          { index: true, element: lz(<PanelHome />) },
           { path: 'onboarding', element: lz(<OnboardingPage />) },
           {
             element: lz(<PanelLayout />),
             children: [
-              { path: 'card', element: lz(<CardConfigPage />) },
+              { index: true, element: lz(<DashboardPage />) },
+              { path: 'tarjetas', element: lz(<CardsPage />) },
+              { path: 'tarjetas/nueva', element: lz(<CardConfigPage key="new" />) },
+              { path: 'tarjetas/:id', element: lz(<CardConfigPage />) },
+              { path: 'card', element: <Navigate to="/app/tarjetas" replace /> },
               { path: 'share', element: lz(<SharePage />) },
               { path: 'clientes', element: lz(<ClientsPage />) },
               { path: 'promocionar', element: lz(<PromotePage />) },

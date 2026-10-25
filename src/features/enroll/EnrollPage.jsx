@@ -5,7 +5,7 @@ import { Button } from '../../components/ui/Button.jsx'
 import { Skeleton } from '../../components/ui/Skeleton.jsx'
 import { brandVars } from '../../lib/contrast.js'
 import { env } from '../../lib/env.js'
-import { firstName, initials, logoUrl, rewardChip } from '../../lib/format.js'
+import { cardParam, firstName, initials, logoUrl, passKey, rewardChip } from '../../lib/format.js'
 import { getPublicMerchant } from '../../services/publicApi.js'
 import { es } from '../../i18n/es.js'
 import { EnrollForm } from './EnrollForm.jsx'
@@ -19,7 +19,6 @@ const WalletBlock = lazy(() =>
 const PrivacySheet = lazy(() => import('./PrivacySheet.jsx'))
 
 const SOURCES = ['nfc', 'qr', 'link']
-const storeKey = (slug) => `fc:pass:${slug}`
 
 function reducer(state, a) {
   switch (a.type) {
@@ -40,9 +39,9 @@ function reducer(state, a) {
   }
 }
 
-function readStored(slug) {
+function readStored(slug, card) {
   try {
-    return localStorage.getItem(storeKey(slug))
+    return localStorage.getItem(passKey(slug, card))
   } catch {
     return null
   }
@@ -53,6 +52,7 @@ export default function EnrollPage() {
   const [params] = useSearchParams()
   const s = params.get('s')
   const source = SOURCES.includes(s) ? s : 'link'
+  const cardCode = cardParam(params)
   const [state, dispatch] = useReducer(reducer, { view: 'loading' })
   const [privacyOpen, setPrivacyOpen] = useState(false)
   const h1 = useRef(null)
@@ -61,12 +61,12 @@ export default function EnrollPage() {
     dispatch({ type: 'loading' })
     let alive = true
     const timer = setTimeout(() => alive && dispatch({ type: 'loaderror' }), 3000 + 7000)
-    getPublicMerchant(slug)
+    getPublicMerchant(slug, cardCode)
       .then((m) => {
         if (!alive) return
         if (!m) return dispatch({ type: 'notfound' })
         dispatch({ type: 'loaded', merchant: m })
-        const stored = readStored(slug)
+        const stored = readStored(slug, cardCode)
         if (stored)
           dispatch({ type: 'done', done: { kind: 'existing_reissued', token: stored, name: '' } })
       })
@@ -76,7 +76,7 @@ export default function EnrollPage() {
       alive = false
       clearTimeout(timer)
     }
-  }, [slug])
+  }, [slug, cardCode])
 
   useEffect(() => load(), [load])
 
@@ -92,7 +92,7 @@ export default function EnrollPage() {
 
   const onDone = (done) => {
     try {
-      localStorage.setItem(storeKey(slug), done.token) // token opaco; sin datos personales
+      localStorage.setItem(passKey(slug, cardCode), done.token) // token opaco; sin datos personales
     } catch {
       /* ignorar */
     }
@@ -101,7 +101,7 @@ export default function EnrollPage() {
 
   const forget = () => {
     try {
-      localStorage.removeItem(storeKey(slug))
+      localStorage.removeItem(passKey(slug, cardCode))
     } catch {
       /* ignorar */
     }
@@ -251,6 +251,7 @@ export default function EnrollPage() {
               <EnrollForm
                 merchant={m}
                 slug={slug}
+                card={cardCode}
                 source={source}
                 onDone={onDone}
                 onOpenPrivacy={() => setPrivacyOpen(true)}

@@ -142,6 +142,7 @@ export async function handle(req) {
       p_marketing_version: input.marketing_version,
       p_ip: ip,
       p_user_agent: clientUa(req.headers),
+      p_card_code: input.card,
     })
     if (error) {
       const m = mapRpcError(error)

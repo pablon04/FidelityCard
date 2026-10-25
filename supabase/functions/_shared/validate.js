@@ -6,6 +6,8 @@ export const SOURCES = ['nfc', 'qr', 'link']
 const SLUG_RE = /^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/ // = merchants_slug_chk
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/ // = customers_email_chk
 const VERSION_RE = /^[A-Za-z0-9._-]{1,40}$/
+/** = programs_code_chk (SQL 0012): tarjeta del enlace ?card=. */
+export const CARD_RE = /^[a-z0-9][a-z0-9-]{0,22}[a-z0-9]$/
 
 /**
  * @typedef {Object} EnrollInput
@@ -18,6 +20,7 @@ const VERSION_RE = /^[A-Za-z0-9._-]{1,40}$/
  * @property {string|null} marketing_version
  * @property {string} captcha_token
  * @property {'nfc'|'qr'|'link'} source
+ * @property {string|null} card
  */
 
 /**
@@ -68,6 +71,9 @@ export function validateEnrollBody(body) {
   const source = b.source === undefined || b.source === null || b.source === '' ? 'link' : b.source
   if (!SOURCES.includes(source)) fields.source = 'Origen no valido.'
 
+  const card = typeof b.card === 'string' && b.card.trim() ? b.card.trim().toLowerCase() : null
+  if (card !== null && !CARD_RE.test(card)) fields.card = 'Tarjeta no valida.'
+
   if (Object.keys(fields).length > 0) return { ok: false, fields }
   return {
     ok: true,
@@ -81,6 +87,7 @@ export function validateEnrollBody(body) {
       marketing_version,
       captcha_token,
       source,
+      card,
     },
   }
 }

@@ -5,7 +5,7 @@ import { Button } from '../../components/ui/Button.jsx'
 import { PassCard } from '../../components/ui/PassCard.jsx'
 import { Skeleton } from '../../components/ui/Skeleton.jsx'
 import { env } from '../../lib/env.js'
-import { logoUrl, mapsUrl } from '../../lib/format.js'
+import { logoUrl, mapsUrl, passKey } from '../../lib/format.js'
 import { GoogleWalletButton } from '../enroll/GoogleWalletButton.jsx'
 import { detectPlatform } from '../../lib/platform.js'
 import { getPublicPass } from '../../services/publicApi.js'
@@ -23,7 +23,7 @@ export default function PassPage() {
       .then((p) => {
         if (p?.slug) {
           try {
-            localStorage.setItem(`fc:pass:${p.slug}`, token) // para /v y /r sin volver a registrarse
+            localStorage.setItem(passKey(p.slug, p.card?.code), token) // para /v sin volver a registrarse
           } catch {
             /* ignorar */
           }

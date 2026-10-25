@@ -16,7 +16,7 @@ const fmtDate = (iso) => new Date(iso).toLocaleDateString('es-ES')
 const fmtVisit = (iso) => (iso ? fmtDate(iso) : 'Nunca')
 
 export default function ClientsPage() {
-  const { merchant, program } = useMerchant()
+  const { merchant, programs } = useMerchant()
   const navigate = useNavigate()
   const [input, setInput] = useState('')
   const [search, setSearch] = useState('')
@@ -80,7 +80,7 @@ export default function ClientsPage() {
           fmtDate(c.createdAt),
           c.lastVisitAt ? fmtDate(c.lastVisitAt) : '',
           c.marketing ? 'Sí' : 'No',
-          c.balance ?? '',
+          progress(c),
         ]),
       )
       const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
@@ -96,10 +96,17 @@ export default function ClientsPage() {
     }
   }
 
+  // Progreso en cada tarjeta en la que esta apuntado; con varias, con el nombre de la tarjeta.
   const progress = (c) => {
-    if (c.balance == null) return '—'
-    if (!program) return String(c.balance)
-    return `${c.balance} / ${program.threshold} ${program.type === 'points' ? 'puntos' : 'visitas'}`
+    if (!c.cards.length) return '—'
+    return c.cards
+      .map((k) => {
+        const p = programs.find((x) => x.id === k.programId)
+        if (!p) return String(k.balance)
+        const txt = `${k.balance} / ${p.threshold} ${p.type === 'points' ? 'puntos' : 'visitas'}`
+        return programs.length > 1 ? `${p.card_name}: ${txt}` : txt
+      })
+      .join(' · ')
   }
 
   const { status, rows, total } = state

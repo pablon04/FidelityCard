@@ -2,20 +2,20 @@ import { useCallback, useEffect, useState } from 'react'
 import { Button } from '../../components/ui/Button.jsx'
 import { Alert } from '../../components/ui/Alert.jsx'
 import { Skeleton } from '../../components/ui/Skeleton.jsx'
-import { getMyMerchant, getMyProgram } from '../../services/merchantService.js'
+import { PLANS, getMyMerchant, getMyPrograms } from '../../services/merchantService.js'
 
 import { Ctx } from './merchantCtx.js'
 
 export function MerchantProvider({ children }) {
-  const [state, setState] = useState({ status: 'loading', merchant: null, program: null })
+  const [state, setState] = useState({ status: 'loading', merchant: null, programs: [] })
 
   const refresh = useCallback(async () => {
     try {
       const merchant = await getMyMerchant()
-      const program = merchant ? await getMyProgram(merchant.id) : null
-      setState({ status: 'ready', merchant, program })
+      const programs = merchant ? await getMyPrograms(merchant.id) : []
+      setState({ status: 'ready', merchant, programs })
     } catch {
-      setState({ status: 'error', merchant: null, program: null })
+      setState({ status: 'error', merchant: null, programs: [] })
     }
   }, [])
 
@@ -38,7 +38,7 @@ export function MerchantProvider({ children }) {
         <Alert tone="error">No hemos podido cargar tu panel. Inténtalo de nuevo.</Alert>
         <Button
           onClick={() => {
-            setState({ status: 'loading', merchant: null, program: null })
+            setState({ status: 'loading', merchant: null, programs: [] })
             refresh()
           }}
         >
@@ -46,5 +46,18 @@ export function MerchantProvider({ children }) {
         </Button>
       </main>
     )
-  return <Ctx.Provider value={{ ...state, refresh }}>{children}</Ctx.Provider>
+  // cards: no archivadas (cuentan para el plan). program: la principal (primera activa).
+  const cards = state.programs.filter((p) => p.status !== 'archived')
+  const activeCards = cards.filter((p) => p.status === 'active')
+  const plan = PLANS[state.merchant?.plan] ?? PLANS.basic
+  const value = {
+    ...state,
+    cards,
+    activeCards,
+    program: activeCards[0] ?? cards[0] ?? null,
+    plan,
+    canAddCard: cards.length < plan.cards,
+    refresh,
+  }
+  return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }

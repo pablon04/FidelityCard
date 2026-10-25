@@ -53,8 +53,10 @@ export async function signJwt(payload, key) {
 }
 
 // ---------- ids y modelos ----------
-export const classId = (issuerId, merchantId) =>
-  `${issuerId}.merchant_${String(merchantId).replace(/-/g, '')}`
+/** Clase de Wallet = una por tarjeta (loyalty_programs.wallet_class_key, SQL 0012). */
+export const classId = (issuerId, classKey) => `${issuerId}.${classKey}`
+/** Clave de las tarjetas creadas antes de 0012 (una clase por comercio). */
+export const legacyClassKey = (merchantId) => `merchant_${String(merchantId).replace(/-/g, '')}`
 export const objectId = (issuerId, publicId) => `${issuerId}.${publicId}`
 
 const text = (value) => ({ defaultValue: { language: 'es', value } })
@@ -81,12 +83,12 @@ function locationModules(location) {
 }
 
 /**
- * @param {{issuerId:string, merchantId:string, merchantName:string, cardName:string, color:string, logoUrl:string,
+ * @param {{issuerId:string, classKey:string, merchantName:string, cardName:string, color:string, logoUrl:string,
  *   location?: {address:string, latitude:number|null, longitude:number|null}|null}} p
  */
 export function buildLoyaltyClass(p) {
   return {
-    id: classId(p.issuerId, p.merchantId),
+    id: classId(p.issuerId, p.classKey),
     issuerName: p.merchantName,
     programName: p.cardName,
     programLogo: image(p.logoUrl, `Logo de ${p.merchantName}`),
@@ -98,14 +100,14 @@ export function buildLoyaltyClass(p) {
 }
 
 /**
- * @param {{issuerId:string, merchantId:string, token:string, customerName:string, type:'visits'|'points',
+ * @param {{issuerId:string, classKey:string, token:string, customerName:string, type:'visits'|'points',
  *   balance:number, threshold:number, reward:string, publicBaseUrl:string}} p
  */
 export function buildLoyaltyObject(p) {
   const base = p.publicBaseUrl.replace(/\/+$/, '')
   return {
     id: objectId(p.issuerId, p.token),
-    classId: classId(p.issuerId, p.merchantId),
+    classId: classId(p.issuerId, p.classKey),
     state: 'ACTIVE',
     accountId: p.token,
     accountName: p.customerName,

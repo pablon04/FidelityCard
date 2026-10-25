@@ -17,7 +17,7 @@ const ERRORS = {
 }
 
 /** Recupera la tarjeta con email + teléfono (los dos deben coincidir con el registro). */
-export function RecoverCardForm({ slug, onRecovered }) {
+export function RecoverCardForm({ slug, card, onRecovered }) {
   const [f, setF] = useState({ email: '', phone: '', country: DEFAULT_COUNTRY })
   const [errors, setErrors] = useState({})
   const [busy, setBusy] = useState(false)
@@ -43,6 +43,7 @@ export function RecoverCardForm({ slug, onRecovered }) {
     try {
       const token = await recoverCard({
         slug,
+        ...(card && { card }),
         email: f.email.trim(),
         phone: normalizePhone(f.phone, dialOf(f.country)),
         captcha_token: await getToken(),

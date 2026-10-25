@@ -14,7 +14,7 @@ export class PromoError extends Error {
   }
 }
 
-export async function sendPromotion({ title, text, code, customerIds }) {
+export async function sendPromotion({ title, text, code, customerIds, programId }) {
   const { data } = await supabase.auth.getSession()
   const token = data?.session?.access_token
   if (!token) throw new PromoError('unauthorized')
@@ -27,7 +27,13 @@ export async function sendPromotion({ title, text, code, customerIds }) {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ title, text, code: code || undefined, customer_ids: customerIds }),
+      body: JSON.stringify({
+        title,
+        text,
+        code: code || undefined,
+        customer_ids: customerIds,
+        program_id: programId || undefined,
+      }),
     })
   } catch {
     throw new PromoError('network')

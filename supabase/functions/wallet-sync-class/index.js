@@ -71,7 +71,7 @@ export async function handle(req) {
     const { data: progs, error: pe } = await userDb
       .from('loyalty_programs')
       .select(
-        'merchant_id, card_name, brand_color, logo_path, merchants(name, address, latitude, longitude)',
+        'merchant_id, wallet_class_key, card_name, brand_color, logo_path, merchants(name, address, latitude, longitude)',
       )
       .eq('status', 'active')
     if (pe) {
@@ -106,7 +106,7 @@ export async function handle(req) {
     for (const p of progs) {
       const cls = buildLoyaltyClass({
         issuerId,
-        merchantId: p.merchant_id,
+        classKey: p.wallet_class_key,
         merchantName: p.merchants?.name ?? p.card_name,
         cardName: p.card_name,
         color: p.brand_color,

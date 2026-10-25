@@ -30,6 +30,10 @@ Env: copiar `.env.example` a `.env.local`. Nunca commitear `.env*` ni secretos.
 - Consentimientos separados por finalidad (`terms_privacy` obligatorio, `marketing` opcional, fila propia).
 - Auth del comercio sin confirmación de email (sin SMTP/dominio propio). Recuperación de contraseña manual en pilotos.
 - Multi-tenant por `merchant_id` + `merchant_members` desde el día 1.
+- Varias tarjetas por comercio según plan (`merchants.plan`: basic 1 / pro 3 / premium 10; lo cambia el equipo a mano en SQL, sin pasarela). Límite en trigger `programs_plan_limit` (cuenta no archivadas).
+- Cada tarjeta se identifica en enlaces con `?card=<loyalty_programs.code>`; `code` NULL = tarjeta principal (enlaces/NFC antiguos sin `?card`). `code` solo editable en borrador. Resolución: `app.resolve_program`.
+- Google Wallet: una clase por tarjeta (`loyalty_programs.wallet_class_key`; las previas a 0012 conservan `merchant_<id>`).
+- Panel: `/app` = Inicio (dashboard, RPC `merchant_dashboard`), `/app/tarjetas`, `/app/tarjetas/:id|nueva`. Iconos: `lucide-react`.
 
 ## Flags (todos apagados por defecto)
 `APPLE_ENABLED` / `WALLET_APPLE_ENABLED` / `VITE_APPLE_WALLET_ENABLED` (=false), `EMAIL_REISSUE_ENABLED` (=false), `GOOGLE_WALLET_ENABLED` (=false hasta Fase 4). Lista completa en `.env.example`.

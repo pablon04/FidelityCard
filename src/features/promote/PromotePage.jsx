@@ -24,7 +24,9 @@ const selectCls =
 
 /** /app/promocionar — mensaje con notificacion a la tarjeta de Wallet de los clientes elegidos. */
 export default function PromotePage() {
-  const { merchant } = useMerchant()
+  const { merchant, activeCards } = useMerchant()
+  // Con varias tarjetas el mensaje va a la de una tarjeta concreta (cada una es un pase en Wallet).
+  const [programId, setProgramId] = useState(() => activeCards[0]?.id ?? '')
   const [signup, setSignup] = useState('all')
   const [visit, setVisit] = useState('away30')
   const [search, setSearch] = useState('')
@@ -71,7 +73,12 @@ export default function PromotePage() {
     }
   }, [merchant.id, search, signup, visit])
 
-  const rows = list.rows
+  const multi = activeCards.length > 1
+  const rows = useMemo(
+    () =>
+      multi ? list.rows.filter((r) => r.cards.some((c) => c.programId === programId)) : list.rows,
+    [list.rows, multi, programId],
+  )
   const allPicked = rows.length > 0 && rows.every((r) => picked.has(r.id))
   const toggle = (id) =>
     setPicked((s) => {
@@ -101,7 +108,8 @@ export default function PromotePage() {
         title: title.trim(),
         text: text.trim(),
         code: code.trim(),
-        customerIds: [...picked],
+        customerIds: [...picked].filter((id) => rows.some((r) => r.id === id)),
+        programId: multi ? programId : undefined,
       })
       setResult(r)
       setConfirming(false)
@@ -131,6 +139,28 @@ export default function PromotePage() {
           1. ¿A quién?
         </h2>
         <div className="flex flex-wrap items-end gap-3">
+          {multi && (
+            <div>
+              <label htmlFor="pc" className="mb-1.5 block text-sm font-medium">
+                Tarjeta
+              </label>
+              <select
+                id="pc"
+                value={programId}
+                onChange={(e) => {
+                  setProgramId(e.target.value)
+                  setPicked(new Set())
+                }}
+                className={selectCls}
+              >
+                {activeCards.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.card_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="min-w-[200px] flex-1">
             <label htmlFor="pq" className="mb-1.5 block text-sm font-medium">
               Buscar

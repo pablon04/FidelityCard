@@ -25,7 +25,12 @@ Deno.test('body valido se normaliza', () => {
     marketing_version: null,
     captcha_token: 'tok',
     source: 'nfc',
+    card: null,
   })
+})
+Deno.test('card opcional: codigo valido o error', () => {
+  assertEquals(validateEnrollBody({ ...good, card: 'Cafe-2' }).value.card, 'cafe-2')
+  assertEquals(validateEnrollBody({ ...good, card: 'no valido!' }).ok, false)
 })
 Deno.test('source por defecto link; marketing exige version', () => {
   const { source: _s, ...rest } = good

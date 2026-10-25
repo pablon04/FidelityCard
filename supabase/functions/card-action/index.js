@@ -21,6 +21,7 @@ import {
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const SLUG_RE = /^[a-z0-9][a-z0-9-]{1,62}$/
+const CARD_RE = /^[a-z0-9][a-z0-9-]{0,22}[a-z0-9]$/ // = programs_code_chk
 
 let _supabase
 function db() {
@@ -65,11 +66,11 @@ async function syncWallet(requestId, token, data) {
     const fallbackLogo =
       Deno.env.get('GOOGLE_WALLET_FALLBACK_LOGO_URL') ||
       `${publicBaseUrl.replace(/\/+$/, '')}/wallet-logo.png`
-    if (data.card_name && data.brand_color && data.merchant_id) {
+    if (data.card_name && data.brand_color && data.wallet_class_key) {
       const cr = await patchLoyaltyClass({
         cls: buildLoyaltyClass({
           issuerId,
-          merchantId: data.merchant_id,
+          classKey: data.wallet_class_key,
           merchantName: data.merchant_name ?? data.card_name,
           cardName: data.card_name,
           color: data.brand_color,
@@ -111,7 +112,9 @@ export async function handle(req) {
     }
     const slug = typeof body?.slug === 'string' ? body.slug.trim().toLowerCase() : ''
     const token = typeof body?.pass_token === 'string' ? body.pass_token.trim().toLowerCase() : ''
+    const card = typeof body?.card === 'string' && body.card ? body.card.trim().toLowerCase() : null
     if (!SLUG_RE.test(slug) || !UUID_RE.test(token)) return fail(400, 'invalid_token')
+    if (card !== null && !CARD_RE.test(card)) return fail(400, 'invalid_token')
 
     const supabase = db()
     const salt = Deno.env.get('IP_HASH_SALT') ?? ''
@@ -127,7 +130,11 @@ export async function handle(req) {
     }
     if (!rl.allowed) return fail(429, 'rate_limited', { retry_after: rl.retry_after })
 
-    const { data, error } = await supabase.rpc('register_visit', { p_slug: slug, p_token: token })
+    const { data, error } = await supabase.rpc('register_visit', {
+      p_slug: slug,
+      p_token: token,
+      p_card: card,
+    })
     if (error || !data || typeof data !== 'object') {
       log(requestId, 'db_error', { pg_code: error?.code })
       return fail(500, 'internal')
@@ -136,7 +143,7 @@ export async function handle(req) {
 
     log(requestId, 'card_action', { result: data.result })
     await syncWallet(requestId, token, data)
-    const { merchant_id: _m, ...publicData } = data // id interno: no sale al cliente
+    const { merchant_id: _m, wallet_class_key: _w, ...publicData } = data // internos: no salen
     return json(publicData, 200, h)
   } catch (e) {
     log(requestId, 'unhandled', { name: e?.name })

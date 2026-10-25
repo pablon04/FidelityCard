@@ -66,7 +66,7 @@ export default function LoginPage() {
         }
         try {
           await createMerchant({ name: f.business.trim() })
-          navigate('/app/card', { replace: true })
+          navigate('/app/tarjetas/nueva', { replace: true })
         } catch {
           navigate('/app/onboarding', { replace: true, state: { name: f.business.trim() } })
         }

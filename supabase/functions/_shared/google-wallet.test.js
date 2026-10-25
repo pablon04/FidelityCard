@@ -6,6 +6,7 @@ import {
   buildLoyaltyObject,
   buildSaveUrl,
   classId,
+  legacyClassKey,
   ensureResource,
   getAccessToken,
   importPrivateKey,
@@ -40,7 +41,7 @@ async function genPem() {
 const decode = (p) => JSON.parse(atob(p.replace(/-/g, '+').replace(/_/g, '/')))
 
 Deno.test('ids', () => {
-  assertEquals(classId('3388', M), '3388.merchant_12345678123442348234123456789abc')
+  assertEquals(classId('3388', legacyClassKey(M)), '3388.merchant_12345678123442348234123456789abc')
   assertEquals(objectId('3388', T), `3388.${T}`)
   assert(UUID_RE.test(T))
   assert(!UUID_RE.test('x'))
@@ -48,7 +49,7 @@ Deno.test('ids', () => {
 Deno.test('clase y objeto', () => {
   const c = buildLoyaltyClass({
     issuerId: '3388',
-    merchantId: M,
+    classKey: legacyClassKey(M),
     merchantName: 'Cafe Luna',
     cardName: 'Tarjeta',
     color: '#7a3b1e',
@@ -59,7 +60,7 @@ Deno.test('clase y objeto', () => {
   assertEquals(c.programLogo.sourceUri.uri, 'https://x/l.png')
   const o = buildLoyaltyObject({
     issuerId: '3388',
-    merchantId: M,
+    classKey: legacyClassKey(M),
     token: T,
     customerName: 'Ana',
     type: 'visits',
@@ -75,7 +76,7 @@ Deno.test('clase y objeto', () => {
   assertEquals(
     buildLoyaltyObject({
       issuerId: '1',
-      merchantId: M,
+      classKey: legacyClassKey(M),
       token: T,
       customerName: 'A',
       type: 'points',
@@ -193,7 +194,7 @@ Deno.test('ensureResource: 200, 409->PATCH, error', async () => {
 Deno.test('clase: direccion y enlace a Maps', () => {
   const base = {
     issuerId: '3388',
-    merchantId: M,
+    classKey: legacyClassKey(M),
     merchantName: 'Cafe Luna',
     cardName: 'Tarjeta',
     color: '#7a3b1e',

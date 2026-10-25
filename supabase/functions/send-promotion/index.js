@@ -1,6 +1,6 @@
 // Edge Function: send-promotion  (POST, requiere sesion de comercio; verify_jwt=false y el JWT
 // se valida aqui para responder al preflight CORS).
-// POST {title, text, code?, customer_ids[]} -> 200 {promotion_id, total, sent, failed, skipped}
+// POST {title, text, code?, customer_ids[], program_id?} -> 200 {promotion_id, total, sent, failed, skipped}
 // Envia un mensaje con notificacion a la tarjeta de Google Wallet de cada cliente elegido.
 // Autorizacion: RLS con el JWT del usuario (solo ve sus clientes). Escritura con service_role.
 // PROMO_REQUIRE_MARKETING_CONSENT=true => salta a quien no tenga consentimiento de marketing
@@ -53,12 +53,15 @@ export async function handle(req) {
     const text = typeof body?.text === 'string' ? body.text.trim() : ''
     const code = typeof body?.code === 'string' ? body.code.trim() : ''
     const ids = Array.isArray(body?.customer_ids) ? [...new Set(body.customer_ids)] : []
+    // Tarjeta de la promocion (varias por comercio, SQL 0012). Sin ella: la primera activa.
+    const programId = typeof body?.program_id === 'string' ? body.program_id : null
     const fields = {}
     if (title.length < 1 || title.length > 60) fields.title = 'invalid'
     if (text.length < 1 || text.length > 300) fields.text = 'invalid'
     if (code.length > 30) fields.code = 'invalid'
     if (ids.length < 1 || ids.length > MAX_RECIPIENTS || !ids.every((i) => UUID_RE.test(i)))
       fields.customer_ids = 'invalid'
+    if (programId !== null && !UUID_RE.test(programId)) fields.program_id = 'invalid'
     if (Object.keys(fields).length) return fail(400, 'validation_error', { fields })
 
     const url = Deno.env.get('SUPABASE_URL')
@@ -94,7 +97,7 @@ export async function handle(req) {
     // RLS: solo clientes de comercios de este usuario.
     const { data: rows, error: ce } = await userDb
       .from('customers')
-      .select('id, merchant_id, customer_cards(public_id, status)')
+      .select('id, merchant_id, customer_cards(public_id, status, program_id)')
       .in('id', ids)
     if (ce) {
       log(requestId, 'db_error', { step: 'customers', pg_code: ce.code })
@@ -137,7 +140,11 @@ export async function handle(req) {
 
     const messageBody = code ? `${text}\n\nCódigo: ${code}` : text
     const results = []
-    const todo = rows.filter((r) => r.customer_cards?.[0]?.status === 'active')
+    const cardOf = (r) =>
+      (r.customer_cards ?? []).find(
+        (c) => c.status === 'active' && (programId === null || c.program_id === programId),
+      )
+    const todo = rows.filter((r) => cardOf(r))
     for (const r of rows) {
       if (!todo.includes(r) || !allowed.has(r.id))
         results.push({
@@ -152,7 +159,7 @@ export async function handle(req) {
       while (next < queue.length) {
         const r = queue[next++]
         const res = await addObjectMessage({
-          id: objectId(issuerId, r.customer_cards[0].public_id),
+          id: objectId(issuerId, cardOf(r).public_id),
           header: title,
           body: messageBody,
           messageId: crypto.randomUUID(),

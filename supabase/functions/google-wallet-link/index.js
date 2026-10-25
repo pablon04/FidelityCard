@@ -105,7 +105,9 @@ export async function handle(req) {
       supabase.from('customers').select('full_name').eq('id', card.customer_id).maybeSingle(),
       supabase
         .from('loyalty_programs')
-        .select('type, threshold, reward_description, card_name, brand_color, logo_path')
+        .select(
+          'type, threshold, reward_description, card_name, brand_color, logo_path, wallet_class_key',
+        )
         .eq('id', card.program_id)
         .maybeSingle(),
       supabase
@@ -153,7 +155,7 @@ export async function handle(req) {
 
     const cls = buildLoyaltyClass({
       issuerId,
-      merchantId: card.merchant_id,
+      classKey: prog.data.wallet_class_key,
       merchantName: merch.data.name,
       cardName: prog.data.card_name,
       color: prog.data.brand_color,
@@ -162,7 +164,7 @@ export async function handle(req) {
     })
     const obj = buildLoyaltyObject({
       issuerId,
-      merchantId: card.merchant_id,
+      classKey: prog.data.wallet_class_key,
       token,
       customerName: cust.data.full_name,
       type: prog.data.type,
@@ -200,7 +202,7 @@ export async function handle(req) {
     if (pe) log(requestId, 'wallet_pass_upsert_error', { pg_code: pe.code })
     await walletEvent(supabase, card.merchant_id, card.id, 'save_url_issued')
 
-    log(requestId, 'google_wallet_link', { class: classId(issuerId, card.merchant_id) })
+    log(requestId, 'google_wallet_link', { class: classId(issuerId, prog.data.wallet_class_key) })
     return json({ save_url }, 200, h)
   } catch (e) {
     log(requestId, 'unhandled', { name: e?.name })

@@ -5,18 +5,17 @@ import { Button } from '../../components/ui/Button.jsx'
 import { PassCard } from '../../components/ui/PassCard.jsx'
 import { Skeleton } from '../../components/ui/Skeleton.jsx'
 import { env } from '../../lib/env.js'
-import { logoUrl } from '../../lib/format.js'
+import { cardParam, logoUrl, passKey, withCard } from '../../lib/format.js'
 import { ApiError, cardAction, getPublicMerchant } from '../../services/publicApi.js'
 import { GoogleWalletButton } from '../enroll/GoogleWalletButton.jsx'
 import { RecoverCardForm } from './RecoverCardForm.jsx'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-const storeKey = (slug) => `fc:pass:${slug}`
 
-function readToken(slug, param) {
+function readToken(slug, card, param) {
   if (param && UUID.test(param)) return param
   try {
-    const t = localStorage.getItem(storeKey(slug))
+    const t = localStorage.getItem(passKey(slug, card))
     return t && UUID.test(t) ? t : null
   } catch {
     return null
@@ -72,7 +71,8 @@ function describe(r) {
 export default function CardActionPage() {
   const { slug } = useParams()
   const [params] = useSearchParams()
-  const [token, setToken] = useState(() => readToken(slug, params.get('t')))
+  const card = cardParam(params)
+  const [token, setToken] = useState(() => readToken(slug, card, params.get('t')))
   const [state, setState] = useState({ status: token ? 'loading' : 'notoken' })
   const [merchant, setMerchant] = useState(null)
   const [recovered, setRecovered] = useState(false)
@@ -80,14 +80,14 @@ export default function CardActionPage() {
 
   const run = (t = token) => {
     setState({ status: 'loading' })
-    cardAction(slug, t)
+    cardAction(slug, t, card)
       .then((result) => setState({ status: 'done', result }))
       .catch((e) => setState({ status: 'error', code: e instanceof ApiError ? e.code : 'network' }))
   }
 
   useEffect(() => {
     document.title = 'Sumar visita'
-    getPublicMerchant(slug)
+    getPublicMerchant(slug, card)
       .then(setMerchant)
       .catch(() => {})
     if (token && !sent.current) {
@@ -100,7 +100,7 @@ export default function CardActionPage() {
   // Tarjeta recuperada con email + telefono: se guarda en este movil y se suma la visita.
   const onRecovered = (t) => {
     try {
-      localStorage.setItem(storeKey(slug), t)
+      localStorage.setItem(passKey(slug, card), t)
     } catch {
       /* ignorar */
     }
@@ -112,7 +112,7 @@ export default function CardActionPage() {
   const canRecover =
     state.status === 'notoken' || (state.status === 'error' && state.code === 'not_found')
   const r = state.result
-  const card = merchant?.card
+  const pub = merchant?.card
   const cardTitle = state.result?.card_name ?? merchant?.card?.card_name ?? merchant?.name
   const info = state.status === 'done' ? describe(state.result) : null
   return (
@@ -149,29 +149,29 @@ export default function CardActionPage() {
       {canRecover && (
         <div className="w-full max-w-sm space-y-4">
           <div className="rounded-card border border-border-subtle p-4">
-            <RecoverCardForm slug={slug} onRecovered={onRecovered} />
+            <RecoverCardForm slug={slug} card={card} onRecovered={onRecovered} />
           </div>
           <p className="text-sm text-text-muted">¿Es tu primera vez?</p>
           <Link
-            to={`/c/${slug}`}
+            to={withCard(`/c/${slug}`, card)}
             className="flex min-h-[52px] w-full items-center justify-center rounded-control border-[1.5px] border-border px-5 text-lg font-semibold"
           >
             Conseguir mi tarjeta
           </Link>
         </div>
       )}
-      {recovered && state.status === 'done' && card && (
+      {recovered && state.status === 'done' && pub && (
         <div className="w-full max-w-sm space-y-3">
           <PassCard
-            name={card.card_name || merchant.name}
-            logoUrl={logoUrl(card.logo_path, env.supabaseUrl)}
-            color={card.brand_color}
-            type={r.type ?? card.type}
-            threshold={r.threshold ?? card.threshold}
+            name={pub.card_name || merchant.name}
+            logoUrl={logoUrl(pub.logo_path, env.supabaseUrl)}
+            color={pub.brand_color}
+            type={r.type ?? pub.type}
+            threshold={r.threshold ?? pub.threshold}
             balance={r.balance}
-            reward={card.reward_description}
+            reward={pub.reward_description}
             qrValue={token}
-            qrAlt={`Código QR de tu tarjeta de ${card.card_name || merchant.name}`}
+            qrAlt={`Código QR de tu tarjeta de ${pub.card_name || merchant.name}`}
           />
           {env.googleWalletEnabled && <GoogleWalletButton token={token} primary />}
         </div>

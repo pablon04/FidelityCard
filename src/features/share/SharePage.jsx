@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Link, useLocation } from 'react-router'
+import { Link, useLocation, useSearchParams } from 'react-router'
 import { Alert } from '../../components/ui/Alert.jsx'
 import { Button } from '../../components/ui/Button.jsx'
 import QrImage from '../../components/ui/QrImage.jsx'
 import { publicBase } from '../../lib/env.js'
+import { withCard } from '../../lib/format.js'
 import { useMerchant } from '../merchant/merchantCtx.js'
 
 function CopyButton({ text, label = 'Copiar' }) {
@@ -42,9 +43,9 @@ function download(href, name) {
 }
 
 /** QR + enlace NFC de una accion de caja (visita o canje). */
-function ActionCode({ id, title, help, url, slug, file }) {
-  const urlQr = `${url}?s=qr`
-  const urlNfc = `${url}?s=nfc`
+function ActionCode({ id, title, help, url, card, slug, file }) {
+  const urlQr = withCard(url, card, { s: 'qr' })
+  const urlNfc = withCard(url, card, { s: 'nfc' })
   const dl = async (fmt) => {
     const { default: QR } = await import('qrcode')
     const opts = { errorCorrectionLevel: 'M', margin: 4 }
@@ -89,39 +90,43 @@ function ActionCode({ id, title, help, url, slug, file }) {
 }
 
 export default function SharePage() {
-  const { merchant, program } = useMerchant()
+  const { merchant, activeCards } = useMerchant()
   const loc = useLocation()
+  const [params, setParams] = useSearchParams()
+  const program = activeCards.find((p) => p.id === params.get('card')) ?? activeCards[0]
   useEffect(() => {
     document.title = 'Compartir tu tarjeta · FidelityCard'
   }, [])
 
-  if (program?.status !== 'active')
+  if (!program)
     return (
       <main className="mx-auto max-w-3xl p-4 md:p-6">
         <h1 className="mb-4 text-2xl font-bold">Compartir tu tarjeta</h1>
         <Alert tone="info">Activa tu tarjeta para obtener el código.</Alert>
         <Link
-          to="/app/card"
+          to="/app/tarjetas"
           className="mt-4 inline-flex min-h-[44px] items-center rounded-control bg-primary px-4 font-semibold text-on-primary"
         >
-          Ir a Tarjeta
+          Ir a Tarjetas
         </Link>
       </main>
     )
 
-  const base = `${publicBase()}/c/${merchant.slug}`
-  const urlQr = `${base}?s=qr`
-  const urlNfc = `${base}?s=nfc`
+  const code = program.code
+  const base = withCard(`${publicBase()}/c/${merchant.slug}`, code)
+  const urlQr = withCard(`${publicBase()}/c/${merchant.slug}`, code, { s: 'qr' })
+  const urlNfc = withCard(`${publicBase()}/c/${merchant.slug}`, code, { s: 'nfc' })
+  const file = code ? `${merchant.slug}-${code}` : merchant.slug
 
   const dl = async (fmt) => {
     const { default: QR } = await import('qrcode')
     const opts = { errorCorrectionLevel: 'M', margin: 4 }
     if (fmt === 'png')
-      download(await QR.toDataURL(urlQr, { ...opts, width: 1280 }), `qr-${merchant.slug}.png`)
+      download(await QR.toDataURL(urlQr, { ...opts, width: 1280 }), `qr-${file}.png`)
     else {
       const svg = await QR.toString(urlQr, { ...opts, type: 'svg' })
       const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }))
-      download(url, `qr-${merchant.slug}.svg`)
+      download(url, `qr-${file}.svg`)
       URL.revokeObjectURL(url)
     }
   }
@@ -129,11 +134,33 @@ export default function SharePage() {
   return (
     <main className="mx-auto max-w-3xl space-y-6 p-4 md:p-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Compartir tu tarjeta</h1>
+        <h1 className="text-2xl font-bold">Compartir {program.card_name}</h1>
         <span className="rounded-chip border border-success px-3 py-1 text-sm font-medium text-success">
           ● Activa
         </span>
       </div>
+      {activeCards.length > 1 && (
+        <div>
+          <label htmlFor="share-card" className="mb-1.5 block text-sm font-medium">
+            Tarjeta
+          </label>
+          <select
+            id="share-card"
+            value={program.id}
+            onChange={(e) => setParams({ card: e.target.value }, { replace: true })}
+            className="min-h-[48px] rounded-control border-[1.5px] border-border bg-surface px-3 text-base"
+          >
+            {activeCards.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.card_name}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-sm text-text-muted">
+            Cada tarjeta tiene su propio QR de alta y de caja.
+          </p>
+        </div>
+      )}
       {loc.state?.justActivated && (
         <Alert tone="success">
           Tu tarjeta está activa. Ya puedes compartir el código con tus clientes.
@@ -212,7 +239,8 @@ export default function SharePage() {
                 : 'El cliente lo escanea o acerca el móvil cada vez que viene: suma una visita. Cuando completa la tarjeta, recibe el premio automáticamente, enseña la pantalla en caja y su tarjeta vuelve a empezar.'
             }
             url={`${publicBase()}/v/${merchant.slug}`}
-            slug={merchant.slug}
+            card={code}
+            slug={file}
             file="visita"
           />
         </>

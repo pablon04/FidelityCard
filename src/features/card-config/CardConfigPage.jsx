@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router'
+import { Link, useNavigate, useParams } from 'react-router'
 import { Alert } from '../../components/ui/Alert.jsx'
 import { Button } from '../../components/ui/Button.jsx'
 import { PassCard } from '../../components/ui/PassCard.jsx'
@@ -7,7 +7,7 @@ import { Sheet } from '../../components/ui/Sheet.jsx'
 import { TextField } from '../../components/ui/TextField.jsx'
 import { isHex, isLowContrast } from '../../lib/contrast.js'
 import { env } from '../../lib/env.js'
-import { logoUrl, mapsUrl } from '../../lib/format.js'
+import { logoUrl, mapsUrl, slugify } from '../../lib/format.js'
 import {
   LOGO_TYPES,
   activateProgram,
@@ -23,10 +23,14 @@ import { useMerchant } from '../merchant/merchantCtx.js'
 
 const SWATCHES = ['#4F46E5', '#0F766E', '#B45309', '#BE123C', '#1F2937', '#FACC15']
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
+const CODE_RE = /^[a-z0-9][a-z0-9-]{0,22}[a-z0-9]$/ // = programs_code_chk (SQL 0012)
+const toCode = (name) => slugify(name).slice(0, 24).replace(/-+$/, '')
 
-function initial(merchant, program) {
+function initial(merchant, program, isFirst) {
+  const card_name = program?.card_name ?? (isFirst ? merchant.name.slice(0, 30) : '')
   return {
-    card_name: program?.card_name ?? merchant.name.slice(0, 30),
+    card_name,
+    code: program?.code ?? '',
     logo_path: program?.logo_path ?? '',
     brand_color: program?.brand_color ?? '#4F46E5',
     type: program?.type ?? 'visits',
@@ -42,8 +46,10 @@ function initial(merchant, program) {
   }
 }
 
-function validate(v, forActivate) {
+function validate(v, forActivate, needsCode) {
   const e = {}
+  if (needsCode && !CODE_RE.test(v.code))
+    e.code = 'Usa entre 2 y 24 letras minúsculas, números o guiones (por ejemplo, cafe).'
   const n = v.card_name.trim().length
   if (n < 2 || n > 30) e.card_name = 'Escribe un nombre de entre 2 y 30 caracteres.'
   if (!isHex(v.brand_color)) e.brand_color = 'Usa un color con formato #RRGGBB.'
@@ -76,11 +82,46 @@ function validate(v, forActivate) {
   return e
 }
 
-export default function CardConfigPage() {
-  const { merchant, program, refresh } = useMerchant()
+/** /app/tarjetas/nueva y /app/tarjetas/:id. El key reinicia el formulario al cambiar de tarjeta. */
+export default function CardConfigRoute() {
+  const { id } = useParams()
+  const { programs, canAddCard, plan } = useMerchant()
+  const program = id ? programs.find((p) => p.id === id) : null
+  if (id && !program)
+    return (
+      <main className="mx-auto max-w-3xl space-y-4 p-4 md:p-6">
+        <Alert tone="info">No encontramos esta tarjeta.</Alert>
+        <Link to="/app/tarjetas" className="font-medium text-primary">
+          ← Volver a tarjetas
+        </Link>
+      </main>
+    )
+  if (!id && !canAddCard)
+    return (
+      <main className="mx-auto max-w-3xl space-y-4 p-4 md:p-6">
+        <h1 className="text-2xl font-bold">Nueva tarjeta</h1>
+        <Alert tone="info">
+          Tu plan {plan.name} permite {plan.cards} {plan.cards === 1 ? 'tarjeta' : 'tarjetas'} y ya
+          las estás usando. Archiva una o pásate a un plan superior para crear más.
+        </Alert>
+        <Link to="/app/tarjetas" className="font-medium text-primary">
+          ← Volver a tarjetas
+        </Link>
+      </main>
+    )
+  return <CardConfigPage key={id ?? 'new'} program={program} />
+}
+
+function CardConfigPage({ program }) {
+  const { merchant, cards, refresh } = useMerchant()
   const navigate = useNavigate()
-  const [v, setV] = useState(() => initial(merchant, program))
-  const [saved, setSaved] = useState(() => JSON.stringify(initial(merchant, program)))
+  const isFirst = !program && cards.length === 0
+  // La primera tarjeta es la "principal" (enlace sin ?card=); las demas llevan codigo propio.
+  const showCode = program ? program.code != null : !isFirst
+  const codeEditable = !program || program.status === 'draft'
+  const [codeTouched, setCodeTouched] = useState(!!program)
+  const [v, setV] = useState(() => initial(merchant, program, isFirst))
+  const [saved, setSaved] = useState(() => JSON.stringify(initial(merchant, program, isFirst)))
   const [errors, setErrors] = useState({})
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState(null) // {tone,text}
@@ -94,7 +135,7 @@ export default function CardConfigPage() {
   const active = program?.status === 'active'
 
   useEffect(() => {
-    document.title = 'Tu tarjeta · FidelityCard'
+    document.title = `${program ? program.card_name : 'Nueva tarjeta'} · FidelityCard`
     if (program)
       countProgramCards(program.id)
         .then((n) => setHasCustomers(n > 0))
@@ -109,7 +150,12 @@ export default function CardConfigPage() {
   }, [dirty])
 
   const set = (k, val) => {
-    setV((p) => ({ ...p, [k]: val }))
+    setV((p) => ({
+      ...p,
+      [k]: val,
+      // Mientras no lo toque, el codigo del enlace sigue al nombre de la tarjeta.
+      ...(k === 'card_name' && showCode && !codeTouched && { code: toCode(val) }),
+    }))
     if (errors[k]) setErrors((p) => ({ ...p, [k]: undefined }))
     setMsg(null)
   }
@@ -203,15 +249,20 @@ export default function CardConfigPage() {
       if (p.status === 'active') syncWalletCard() // nombre/color/logo a los pases ya guardados
       await refresh()
       setSaved(JSON.stringify(v))
-      if (activate) navigate('/app/share', { state: { justActivated: true } })
+      if (activate) navigate(`/app/share?card=${p.id}`, { state: { justActivated: true } })
+      else if (!program) navigate(`/app/tarjetas/${p.id}`, { replace: true })
       else setMsg({ tone: 'success', text: 'Cambios guardados.' })
     } catch (err) {
       const text =
-        err?.code === 'type_locked'
-          ? 'No puedes cambiar el tipo porque ya tienes clientes.'
-          : err?.code === 'forbidden'
-            ? 'No tienes permiso para activar esta tarjeta.'
-            : 'No hemos podido guardar los cambios. Tus datos siguen aquí; inténtalo de nuevo.'
+        err?.code === 'plan_limit'
+          ? 'Has llegado al límite de tarjetas de tu plan. Archiva otra o mejora tu plan.'
+          : err?.code === 'code_taken'
+            ? 'Ya tienes otra tarjeta con ese código de enlace. Elige otro.'
+            : err?.code === 'code_locked'
+              ? 'El código del enlace no se puede cambiar en una tarjeta activa.'
+              : err?.code === 'forbidden'
+                ? 'No tienes permiso para activar esta tarjeta.'
+                : 'No hemos podido guardar los cambios. Tus datos siguen aquí; inténtalo de nuevo.'
       setMsg({ tone: 'error', text })
     } finally {
       setBusy(false)
@@ -220,7 +271,7 @@ export default function CardConfigPage() {
   }
 
   const attempt = (activate) => {
-    const errs = validate(v, activate)
+    const errs = validate(v, activate, showCode && codeEditable)
     setErrors(errs)
     const first = Object.keys(errs)[0]
     if (first) {
@@ -251,7 +302,12 @@ export default function CardConfigPage() {
   return (
     <main className="mx-auto max-w-5xl p-4 md:p-6">
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Tu tarjeta</h1>
+        <div>
+          <Link to="/app/tarjetas" className="text-sm font-medium text-primary">
+            ← Tarjetas
+          </Link>
+          <h1 className="text-2xl font-bold">{program ? program.card_name : 'Nueva tarjeta'}</h1>
+        </div>
         <span className="rounded-chip border border-border-subtle px-3 py-1 text-sm">
           Estado: {active ? 'Activa' : 'Borrador'}
         </span>
@@ -290,6 +346,26 @@ export default function CardConfigPage() {
               error={errors.card_name}
               maxLength={30}
             />
+            {showCode && (
+              <TextField
+                name="code"
+                label="Código del enlace"
+                required={codeEditable}
+                value={v.code}
+                readOnly={!codeEditable}
+                onChange={(e) => {
+                  setCodeTouched(true)
+                  set('code', e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))
+                }}
+                error={errors.code}
+                maxLength={24}
+                help={
+                  codeEditable
+                    ? `Identifica esta tarjeta en su QR y enlace: …/c/${merchant.slug}?card=${v.code || 'codigo'}. No se puede cambiar después de activarla.`
+                    : `Va en el QR y el enlace de esta tarjeta (…/c/${merchant.slug}?card=${v.code}). No se puede cambiar.`
+                }
+              />
+            )}
             <div>
               <p className="mb-1.5 text-sm font-medium">Logo</p>
               <div className="flex items-center gap-3">

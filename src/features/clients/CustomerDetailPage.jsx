@@ -107,7 +107,7 @@ function PhoneDialog({ open, customer, onClose, onSaved }) {
 /** /app/clientes/:id — ficha del cliente con su historial de visitas y premios. */
 export default function CustomerDetailPage() {
   const { id } = useParams()
-  const { merchant, program } = useMerchant()
+  const { merchant, programs } = useMerchant()
   const [state, setState] = useState({ status: 'loading' })
   const [editPhone, setEditPhone] = useState(false)
   const [notice, setNotice] = useState('')
@@ -161,13 +161,18 @@ export default function CustomerDetailPage() {
   const { c } = state
   const visits = c.movements.filter((m) => m.kind === 'earn_visit').length
   const rewards = c.movements.filter((m) => m.kind === 'redeem')
-  const unit = program?.type === 'points' ? 'puntos' : 'visitas'
-  const progress =
-    c.balance == null
-      ? '—'
-      : program
-        ? `${c.balance} / ${program.threshold} ${unit}`
-        : String(c.balance)
+  const multi = programs.length > 1
+  const cardName = (id) => programs.find((p) => p.id === id)?.card_name ?? ''
+  const progress = c.cards.length
+    ? c.cards
+        .map((k) => {
+          const p = programs.find((x) => x.id === k.programId)
+          if (!p) return String(k.balance)
+          const txt = `${k.balance} / ${p.threshold} ${p.type === 'points' ? 'puntos' : 'visitas'}`
+          return multi ? `${p.card_name}: ${txt}` : txt
+        })
+        .join(' · ')
+    : '—'
 
   return (
     <main className="mx-auto max-w-4xl space-y-6 p-4 md:p-6">
@@ -229,6 +234,11 @@ export default function CustomerDetailPage() {
                   <th scope="col" className="py-2 pr-3">
                     Fecha y hora
                   </th>
+                  {multi && (
+                    <th scope="col" className="py-2 pr-3">
+                      Tarjeta
+                    </th>
+                  )}
                   <th scope="col" className="py-2 pr-3">
                     Movimiento
                   </th>
@@ -244,6 +254,7 @@ export default function CustomerDetailPage() {
                 {c.movements.map((m) => (
                   <tr key={m.id} className="border-b border-border-subtle">
                     <td className="whitespace-nowrap py-2 pr-3">{fmtDateTime(m.at)}</td>
+                    {multi && <td className="py-2 pr-3">{cardName(m.programId)}</td>}
                     <td className="py-2 pr-3 font-medium">
                       {m.kind === 'redeem' ? '🎁 ' : ''}
                       {KIND[m.kind] ?? m.kind}
@@ -262,7 +273,8 @@ export default function CustomerDetailPage() {
                     {KIND[m.kind] ?? m.kind} ({m.delta > 0 ? `+${m.delta}` : m.delta})
                   </p>
                   <p className="text-sm text-text-muted">
-                    {fmtDateTime(m.at)} · Saldo {m.balanceAfter}
+                    {fmtDateTime(m.at)}
+                    {multi ? ` · ${cardName(m.programId)}` : ''} · Saldo {m.balanceAfter}
                   </p>
                 </li>
               ))}

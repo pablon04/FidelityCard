@@ -6,7 +6,7 @@
 import { supabase } from '../lib/supabase.js'
 
 const COLS =
-  'id, full_name, email, phone_e164, created_at, last_visit_at, customer_cards(balance, status), consents(purpose, revoked_at)'
+  'id, full_name, email, phone_e164, created_at, last_visit_at, customer_cards(balance, status, program_id), consents(purpose, revoked_at)'
 export const PAGE_SIZE = 25
 
 /** Quita caracteres con significado en filtros PostgREST / LIKE. */
@@ -67,6 +67,13 @@ const shape = (r) => ({
   lastVisitAt: r.last_visit_at,
   marketing: (r.consents ?? []).some((c) => c.purpose === 'marketing' && !c.revoked_at),
   balance: r.customer_cards?.[0]?.balance ?? null,
+  // Una entrada por tarjeta del comercio en la que esta apuntado (SQL 0012: varias tarjetas).
+  cards: (r.customer_cards ?? []).map((c) => ({
+    id: c.id,
+    programId: c.program_id,
+    balance: c.balance,
+    status: c.status,
+  })),
 })
 
 /** @returns {Promise<{rows:object[], total:number}>} */
@@ -95,7 +102,7 @@ export async function getCustomerDetail(merchantId, customerId) {
   const { data: c, error } = await supabase
     .from('customers')
     .select(
-      'id, full_name, email, phone_e164, created_at, last_visit_at, customer_cards(id, balance, status, created_at), consents(purpose, revoked_at)',
+      'id, full_name, email, phone_e164, created_at, last_visit_at, customer_cards(id, balance, status, created_at, program_id), consents(purpose, revoked_at)',
     )
     .eq('merchant_id', merchantId)
     .eq('id', customerId)
@@ -103,13 +110,14 @@ export async function getCustomerDetail(merchantId, customerId) {
   if (error) throw error
   if (!c) return null
   const card = c.customer_cards?.[0] ?? null
+  const cardIds = (c.customer_cards ?? []).map((x) => x.id)
   let movements = []
-  if (card) {
+  if (cardIds.length) {
     const { data, error: e2 } = await supabase
       .from('loyalty_ledger')
-      .select('id, kind, delta, balance_after, created_at')
+      .select('id, card_id, kind, delta, balance_after, created_at')
       .eq('merchant_id', merchantId)
-      .eq('card_id', card.id)
+      .in('card_id', cardIds)
       .order('created_at', { ascending: false })
       .limit(500)
     if (e2) throw e2
@@ -120,6 +128,7 @@ export async function getCustomerDetail(merchantId, customerId) {
     cardStatus: card?.status ?? null,
     movements: movements.map((m) => ({
       id: m.id,
+      programId: c.customer_cards.find((x) => x.id === m.card_id)?.program_id ?? null,
       kind: m.kind,
       delta: m.delta,
       balanceAfter: m.balance_after,
