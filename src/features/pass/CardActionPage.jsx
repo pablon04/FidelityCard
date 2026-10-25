@@ -2,8 +2,13 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router'
 import { Alert } from '../../components/ui/Alert.jsx'
 import { Button } from '../../components/ui/Button.jsx'
+import { PassCard } from '../../components/ui/PassCard.jsx'
 import { Skeleton } from '../../components/ui/Skeleton.jsx'
+import { env } from '../../lib/env.js'
+import { logoUrl } from '../../lib/format.js'
 import { ApiError, cardAction, getPublicMerchant } from '../../services/publicApi.js'
+import { GoogleWalletButton } from '../enroll/GoogleWalletButton.jsx'
+import { RecoverCardForm } from './RecoverCardForm.jsx'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const storeKey = (slug) => `fc:pass:${slug}`
@@ -67,14 +72,15 @@ function describe(r) {
 export default function CardActionPage() {
   const { slug } = useParams()
   const [params] = useSearchParams()
-  const token = readToken(slug, params.get('t'))
+  const [token, setToken] = useState(() => readToken(slug, params.get('t')))
   const [state, setState] = useState({ status: token ? 'loading' : 'notoken' })
   const [merchant, setMerchant] = useState(null)
+  const [recovered, setRecovered] = useState(false)
   const sent = useRef(false)
 
-  const run = () => {
+  const run = (t = token) => {
     setState({ status: 'loading' })
-    cardAction(slug, token)
+    cardAction(slug, t)
       .then((result) => setState({ status: 'done', result }))
       .catch((e) => setState({ status: 'error', code: e instanceof ApiError ? e.code : 'network' }))
   }
@@ -91,6 +97,22 @@ export default function CardActionPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Tarjeta recuperada con email + telefono: se guarda en este movil y se suma la visita.
+  const onRecovered = (t) => {
+    try {
+      localStorage.setItem(storeKey(slug), t)
+    } catch {
+      /* ignorar */
+    }
+    setToken(t)
+    setRecovered(true)
+    run(t)
+  }
+
+  const canRecover =
+    state.status === 'notoken' || (state.status === 'error' && state.code === 'not_found')
+  const r = state.result
+  const card = merchant?.card
   const cardTitle = state.result?.card_name ?? merchant?.card?.card_name ?? merchant?.name
   const info = state.status === 'done' ? describe(state.result) : null
   return (
@@ -116,21 +138,42 @@ export default function CardActionPage() {
           <Alert tone="error">
             {ERRORS[state.code] ?? 'No hemos podido completar la acción. Inténtalo de nuevo.'}
           </Alert>
-          {state.code !== 'not_found' && <Button onClick={run}>Reintentar</Button>}
+          {state.code !== 'not_found' && <Button onClick={() => run()}>Reintentar</Button>}
         </div>
       )}
       {state.status === 'notoken' && (
-        <div className="w-full max-w-sm space-y-3">
-          <Alert tone="info">
-            No encontramos tu tarjeta en este móvil. Abre tu tarjeta desde el enlace con el que te
-            registraste, o regístrate si aún no la tienes.
-          </Alert>
+        <Alert tone="info" className="w-full max-w-sm">
+          No encontramos tu tarjeta en este móvil.
+        </Alert>
+      )}
+      {canRecover && (
+        <div className="w-full max-w-sm space-y-4">
+          <div className="rounded-card border border-border-subtle p-4">
+            <RecoverCardForm slug={slug} onRecovered={onRecovered} />
+          </div>
+          <p className="text-sm text-text-muted">¿Es tu primera vez?</p>
           <Link
             to={`/c/${slug}`}
-            className="flex min-h-[52px] w-full items-center justify-center rounded-control bg-primary px-5 text-lg font-semibold text-on-primary"
+            className="flex min-h-[52px] w-full items-center justify-center rounded-control border-[1.5px] border-border px-5 text-lg font-semibold"
           >
             Conseguir mi tarjeta
           </Link>
+        </div>
+      )}
+      {recovered && state.status === 'done' && card && (
+        <div className="w-full max-w-sm space-y-3">
+          <PassCard
+            name={card.card_name || merchant.name}
+            logoUrl={logoUrl(card.logo_path, env.supabaseUrl)}
+            color={card.brand_color}
+            type={r.type ?? card.type}
+            threshold={r.threshold ?? card.threshold}
+            balance={r.balance}
+            reward={card.reward_description}
+            qrValue={token}
+            qrAlt={`Código QR de tu tarjeta de ${card.card_name || merchant.name}`}
+          />
+          {env.googleWalletEnabled && <GoogleWalletButton token={token} primary />}
         </div>
       )}
       {token && state.status !== 'loading' && (

@@ -2,8 +2,11 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { Alert } from '../../components/ui/Alert.jsx'
 import { Button } from '../../components/ui/Button.jsx'
+import { Sheet } from '../../components/ui/Sheet.jsx'
 import { Skeleton } from '../../components/ui/Skeleton.jsx'
-import { getCustomerDetail } from '../../services/customersService.js'
+import { TextField } from '../../components/ui/TextField.jsx'
+import { normalizePhone, stripSpanishPrefix } from '../../lib/phone.js'
+import { getCustomerDetail, updateCustomerPhone } from '../../services/customersService.js'
 import { useMerchant } from '../merchant/merchantCtx.js'
 
 const fmtDateTime = (iso) =>
@@ -26,11 +29,87 @@ function Field({ label, children }) {
   )
 }
 
+const PHONE_ERRORS = {
+  phone_taken: 'Ese teléfono ya lo tiene otro cliente de tu comercio.',
+  invalid_phone: 'Revisa el teléfono.',
+  forbidden: 'No tienes permiso para cambiar este cliente.',
+}
+
+/** Dialogo para cambiar el telefono (cliente que cambio de numero). */
+function PhoneDialog({ open, customer, onClose, onSaved }) {
+  const [phone, setPhone] = useState('')
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    if (!open) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPhone(stripSpanishPrefix(customer.phone))
+    setError('')
+  }, [open, customer.phone])
+
+  const save = async (e) => {
+    e.preventDefault()
+    const e164 = normalizePhone(phone)
+    if (!e164) return setError('Escribe un teléfono válido.')
+    if (e164 === customer.phone) return onClose()
+    setBusy(true)
+    setError('')
+    try {
+      onSaved(await updateCustomerPhone(customer.id, e164))
+    } catch (err) {
+      setError(PHONE_ERRORS[err.code] ?? 'No hemos podido guardar el teléfono. Inténtalo de nuevo.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Sheet variant="dialog" open={open} onClose={onClose} title="Cambiar teléfono">
+      <form onSubmit={save} noValidate className="space-y-4">
+        <p className="text-sm text-text-muted">
+          Úsalo si {customer.name} ha cambiado de número. Con el nuevo teléfono y su email podrá
+          recuperar su tarjeta en otro móvil.
+        </p>
+        <TextField
+          label="Nuevo teléfono"
+          required
+          name="phone"
+          type="tel"
+          inputMode="tel"
+          autoComplete="off"
+          prefix={
+            <span>
+              <span aria-hidden="true">🇪🇸</span> +34
+            </span>
+          }
+          value={phone}
+          onChange={(e) => {
+            setPhone(stripSpanishPrefix(e.target.value))
+            setError('')
+          }}
+          error={error}
+        />
+        <div className="flex gap-3">
+          <Button type="submit" loading={busy}>
+            Guardar
+          </Button>
+          <Button variant="secondary" onClick={onClose}>
+            Cancelar
+          </Button>
+        </div>
+      </form>
+    </Sheet>
+  )
+}
+
 /** /app/clientes/:id — ficha del cliente con su historial de visitas y premios. */
 export default function CustomerDetailPage() {
   const { id } = useParams()
   const { merchant, program } = useMerchant()
   const [state, setState] = useState({ status: 'loading' })
+  const [editPhone, setEditPhone] = useState(false)
+  const [notice, setNotice] = useState('')
 
   const load = useCallback(() => {
     setState({ status: 'loading' })
@@ -96,13 +175,19 @@ export default function CustomerDetailPage() {
         <h1 className="text-2xl font-bold">{c.name}</h1>
       </div>
 
+      {notice && <Alert tone="success">{notice}</Alert>}
       <section aria-labelledby="h-data" className="rounded-card border border-border-subtle p-4">
         <h2 id="h-data" className="sr-only">
           Datos del cliente
         </h2>
         <dl className="grid gap-4 sm:grid-cols-2">
           <Field label="Email">{c.email}</Field>
-          <Field label="Teléfono">{c.phone}</Field>
+          <Field label="Teléfono">
+            {c.phone}{' '}
+            <Button variant="link" onClick={() => setEditPhone(true)}>
+              Cambiar
+            </Button>
+          </Field>
           <Field label="Registrado el">{fmtDateTime(c.createdAt)}</Field>
           <Field label="Última visita">
             {c.lastVisitAt ? fmtDateTime(c.lastVisitAt) : 'Todavía no ha venido'}
@@ -113,6 +198,17 @@ export default function CustomerDetailPage() {
           <Field label="Premios canjeados">{rewards.length}</Field>
         </dl>
       </section>
+
+      <PhoneDialog
+        open={editPhone}
+        customer={c}
+        onClose={() => setEditPhone(false)}
+        onSaved={(phone) => {
+          setState({ status: 'ready', c: { ...c, phone } })
+          setEditPhone(false)
+          setNotice('Teléfono actualizado.')
+        }}
+      />
 
       <section aria-labelledby="h-hist">
         <h2 id="h-hist" className="mb-2 text-lg font-semibold">

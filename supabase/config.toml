@@ -445,3 +445,8 @@ entrypoint = "./functions/wallet-sync-class/index.js"
 enabled = true
 verify_jwt = false
 entrypoint = "./functions/send-promotion/index.js"
+
+[functions.recover-card]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/recover-card/index.js"

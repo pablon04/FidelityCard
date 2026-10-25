@@ -127,3 +127,27 @@ export async function getCustomerDetail(merchantId, customerId) {
     })),
   }
 }
+
+/**
+ * Cambia el telefono del cliente (RPC update_customer_phone, solo owner). `phone` en E.164.
+ * Errores (err.code): phone_taken | invalid_phone | forbidden | unknown.
+ * @returns {Promise<string>} telefono guardado
+ */
+export async function updateCustomerPhone(customerId, phone) {
+  const { data, error } = await supabase.rpc('update_customer_phone', {
+    p_customer_id: customerId,
+    p_phone_e164: phone,
+  })
+  if (error) {
+    const msg = error.message || ''
+    const code = /phone_taken/.test(msg)
+      ? 'phone_taken'
+      : /invalid_phone/.test(msg)
+        ? 'invalid_phone'
+        : /forbidden_or_not_found/.test(msg)
+          ? 'forbidden'
+          : 'unknown'
+    throw Object.assign(new Error(code), { code })
+  }
+  return data
+}

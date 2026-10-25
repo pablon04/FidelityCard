@@ -143,3 +143,31 @@ export async function cardAction(slug, passToken) {
     retryAfter: (err.retry_after ?? Number(res.headers.get('retry-after'))) || undefined,
   })
 }
+
+/**
+ * Recuperar tarjeta (pase perdido): Edge Function recover-card.
+ * POST {slug, email, phone, captcha_token} -> 200 {pass_token}.
+ * Errores {error:{code}}: validation_error(400), captcha_failed(403), not_found(404, generico:
+ * no hay tarjeta o email y telefono no son del mismo cliente), rate_limited(429), internal(500).
+ * @returns {Promise<string>} pass_token
+ */
+export async function recoverCard(payload) {
+  const res = await request(`${env.supabaseUrl}/functions/v1/recover-card`, {
+    method: 'POST',
+    headers: baseHeaders(),
+    body: JSON.stringify(payload),
+  })
+  let body = null
+  try {
+    body = await res.json()
+  } catch {
+    /* no JSON */
+  }
+  if (res.ok && typeof body?.pass_token === 'string') return body.pass_token
+  const err = body?.error ?? {}
+  throw new ApiError(err.code || 'internal', {
+    status: res.status,
+    retryAfter: (err.retry_after ?? Number(res.headers.get('retry-after'))) || undefined,
+    fields: err.fields,
+  })
+}
