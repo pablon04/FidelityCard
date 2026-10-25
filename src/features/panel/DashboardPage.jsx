@@ -237,6 +237,15 @@ export default function DashboardPage() {
         </p>
       </div>
 
+      {!(merchant.legal_name?.trim() && merchant.privacy_email?.trim()) && (
+        <Alert tone="info">
+          Te faltan tus datos legales.{' '}
+          <Link to="/app/cuenta" className="font-semibold underline">
+            Complétalos en Cuenta
+          </Link>{' '}
+          para poder activar tarjetas.
+        </Alert>
+      )}
       {d.cards.length === 0 && (
         <Alert tone="info">
           Aún no tienes ninguna tarjeta.{' '}

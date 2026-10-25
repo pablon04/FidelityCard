@@ -98,27 +98,22 @@ export async function createMerchant({ name, legalName = null, privacyEmail = nu
   throw new Error('slug_collision')
 }
 
-export async function updateMerchantLegal(merchantId, { legal_name, tax_id, privacy_email }) {
+/**
+ * Datos de Cuenta: nombre comercial, legales (responsable RGPD) y ubicacion. Valen para todas
+ * las tarjetas. Coordenadas: ambas o ninguna (SQL 0009).
+ */
+export async function updateMerchantAccount(merchantId, v) {
+  const hasCoords = Number.isFinite(v.latitude) && Number.isFinite(v.longitude)
   const { error } = await supabase
     .from('merchants')
     .update({
-      legal_name: legal_name?.trim() || null,
-      tax_id: tax_id?.trim() || null,
-      privacy_email: privacy_email?.trim() || null,
-    })
-    .eq('id', merchantId)
-  if (error) throw error
-}
-
-/** Direccion + coordenadas (ambas o ninguna; ver SQL 0009). */
-export async function updateMerchantLocation(merchantId, { address, latitude, longitude }) {
-  const hasCoords = Number.isFinite(latitude) && Number.isFinite(longitude)
-  const { error } = await supabase
-    .from('merchants')
-    .update({
-      address: address?.trim() || null,
-      latitude: hasCoords ? latitude : null,
-      longitude: hasCoords ? longitude : null,
+      name: v.name.trim(),
+      legal_name: v.legal_name?.trim() || null,
+      tax_id: v.tax_id?.trim() || null,
+      privacy_email: v.privacy_email?.trim() || null,
+      address: v.address?.trim() || null,
+      latitude: hasCoords ? v.latitude : null,
+      longitude: hasCoords ? v.longitude : null,
     })
     .eq('id', merchantId)
   if (error) throw error

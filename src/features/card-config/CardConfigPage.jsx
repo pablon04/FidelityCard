@@ -7,49 +7,42 @@ import { Sheet } from '../../components/ui/Sheet.jsx'
 import { TextField } from '../../components/ui/TextField.jsx'
 import { isHex, isLowContrast } from '../../lib/contrast.js'
 import { env } from '../../lib/env.js'
-import { logoUrl, mapsUrl, slugify } from '../../lib/format.js'
+import { logoUrl, slugify } from '../../lib/format.js'
 import {
   LOGO_TYPES,
   activateProgram,
   countProgramCards,
-  geocodeAddress,
   saveProgram,
   syncWalletCard,
-  updateMerchantLegal,
-  updateMerchantLocation,
   uploadLogo,
 } from '../../services/merchantService.js'
 import { useMerchant } from '../merchant/merchantCtx.js'
 
 const SWATCHES = ['#4F46E5', '#0F766E', '#B45309', '#BE123C', '#1F2937', '#FACC15']
-const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
-const CODE_RE = /^[a-z0-9][a-z0-9-]{0,22}[a-z0-9]$/ // = programs_code_chk (SQL 0012)
-const toCode = (name) => slugify(name).slice(0, 24).replace(/-+$/, '')
+/** Codigo del enlace (?card=) a partir del nombre; cumple programs_code_chk (SQL 0012). */
+function toCode(name, n = 0) {
+  const sfx = n ? `-${n + 1}` : ''
+  const base = slugify(name)
+    .slice(0, 24 - sfx.length)
+    .replace(/-+$/, '')
+  return (base.length < 2 ? `${base}-1` : base) + sfx
+}
 
 function initial(merchant, program, isFirst) {
   const card_name = program?.card_name ?? (isFirst ? merchant.name.slice(0, 30) : '')
   return {
     card_name,
-    code: program?.code ?? '',
     logo_path: program?.logo_path ?? '',
     brand_color: program?.brand_color ?? '#4F46E5',
     type: program?.type ?? 'visits',
     threshold: program?.threshold ?? 8,
     points_per_visit: Number(program?.points_per_visit ?? 1),
     reward_description: program?.reward_description ?? '',
-    legal_name: merchant.legal_name ?? '',
-    tax_id: merchant.tax_id ?? '',
-    privacy_email: merchant.privacy_email ?? '',
-    address: merchant.address ?? '',
-    latitude: merchant.latitude ?? null,
-    longitude: merchant.longitude ?? null,
   }
 }
 
-function validate(v, forActivate, needsCode) {
+function validate(v) {
   const e = {}
-  if (needsCode && !CODE_RE.test(v.code))
-    e.code = 'Usa entre 2 y 24 letras minúsculas, números o guiones (por ejemplo, cafe).'
   const n = v.card_name.trim().length
   if (n < 2 || n > 30) e.card_name = 'Escribe un nombre de entre 2 y 30 caracteres.'
   if (!isHex(v.brand_color)) e.brand_color = 'Usa un color con formato #RRGGBB.'
@@ -69,16 +62,6 @@ function validate(v, forActivate, needsCode) {
   const r = v.reward_description.trim().length
   if (r < 3 || r > 60)
     e.reward_description = 'Escribe qué recibirá tu cliente (entre 3 y 60 caracteres).'
-  const a = v.address.trim().length
-  if (a && (a < 5 || a > 200)) e.address = 'Escribe una dirección de entre 5 y 200 caracteres.'
-  if (v.privacy_email.trim() && !EMAIL_RE.test(v.privacy_email.trim()))
-    e.privacy_email = 'Revisa el email de contacto.'
-  if (forActivate) {
-    if (!v.legal_name.trim())
-      e.legal_name = 'Necesitamos la razón social o el nombre del responsable.'
-    if (!v.privacy_email.trim())
-      e.privacy_email ||= 'Escribe un email de contacto para los derechos de tus clientes.'
-  }
   return e
 }
 
@@ -116,10 +99,8 @@ function CardConfigPage({ program }) {
   const { merchant, cards, refresh } = useMerchant()
   const navigate = useNavigate()
   const isFirst = !program && cards.length === 0
-  // La primera tarjeta es la "principal" (enlace sin ?card=); las demas llevan codigo propio.
-  const showCode = program ? program.code != null : !isFirst
-  const codeEditable = !program || program.status === 'draft'
-  const [codeTouched, setCodeTouched] = useState(!!program)
+  // Datos legales (Cuenta): obligatorios para activar cualquier tarjeta.
+  const legalReady = !!(merchant.legal_name?.trim() && merchant.privacy_email?.trim())
   const [v, setV] = useState(() => initial(merchant, program, isFirst))
   const [saved, setSaved] = useState(() => JSON.stringify(initial(merchant, program, isFirst)))
   const [errors, setErrors] = useState({})
@@ -129,7 +110,6 @@ function CardConfigPage({ program }) {
   const [hasCustomers, setHasCustomers] = useState(false)
   const [logoBusy, setLogoBusy] = useState(false)
   const [logoError, setLogoError] = useState('')
-  const [geo, setGeo] = useState({ busy: false, text: '', tone: 'muted' })
   const formRef = useRef(null)
   const dirty = useMemo(() => JSON.stringify(v) !== saved, [v, saved])
   const active = program?.status === 'active'
@@ -150,12 +130,7 @@ function CardConfigPage({ program }) {
   }, [dirty])
 
   const set = (k, val) => {
-    setV((p) => ({
-      ...p,
-      [k]: val,
-      // Mientras no lo toque, el codigo del enlace sigue al nombre de la tarjeta.
-      ...(k === 'card_name' && showCode && !codeTouched && { code: toCode(val) }),
-    }))
+    setV((p) => ({ ...p, [k]: val }))
     if (errors[k]) setErrors((p) => ({ ...p, [k]: undefined }))
     setMsg(null)
   }
@@ -182,69 +157,28 @@ function CardConfigPage({ program }) {
     }
   }
 
-  const setCoords = (latitude, longitude) => setV((p) => ({ ...p, latitude, longitude }))
-
-  const onGeocode = async () => {
-    if (v.address.trim().length < 5)
-      return setErrors((p) => ({ ...p, address: 'Escribe primero la dirección completa.' }))
-    setGeo({ busy: true, text: '', tone: 'muted' })
-    try {
-      const hit = await geocodeAddress(v.address)
-      if (!hit) {
-        setCoords(null, null)
-        return setGeo({
-          busy: false,
-          tone: 'warning',
-          text: 'No encontramos esa dirección. Añade calle, número, ciudad y código postal, o usa tu ubicación actual.',
+  // La primera tarjeta es la "principal" (enlace sin ?card=). Las demas reciben un codigo propio
+  // derivado del nombre; si ya existe se prueba con sufijo (-2, -3...).
+  const saveNew = async (values) => {
+    if (program) return saveProgram(merchant.id, program, { ...values, code: program.code })
+    if (isFirst) return saveProgram(merchant.id, null, { ...values, code: null })
+    for (let n = 0; ; n++) {
+      try {
+        return await saveProgram(merchant.id, null, {
+          ...values,
+          code: toCode(values.card_name, n),
         })
+      } catch (err) {
+        if (err?.code !== 'code_taken' || n >= 20) throw err
       }
-      setCoords(hit.latitude, hit.longitude)
-      setGeo({ busy: false, tone: 'muted', text: `Encontrada: ${hit.label}` })
-    } catch {
-      setGeo({
-        busy: false,
-        tone: 'warning',
-        text: 'No hemos podido buscar la dirección. Inténtalo de nuevo.',
-      })
     }
   }
-
-  const onMyLocation = () => {
-    if (!navigator.geolocation)
-      return setGeo({
-        busy: false,
-        tone: 'warning',
-        text: 'Tu navegador no permite obtener la ubicación.',
-      })
-    setGeo({ busy: true, text: '', tone: 'muted' })
-    navigator.geolocation.getCurrentPosition(
-      ({ coords }) => {
-        setCoords(Number(coords.latitude.toFixed(6)), Number(coords.longitude.toFixed(6)))
-        setGeo({
-          busy: false,
-          tone: 'muted',
-          text: 'Ubicación actual guardada como la de tu negocio.',
-        })
-      },
-      () =>
-        setGeo({
-          busy: false,
-          tone: 'warning',
-          text: 'No hemos podido obtener tu ubicación. Revisa los permisos del navegador.',
-        }),
-      { enableHighAccuracy: true, timeout: 15000 },
-    )
-  }
-
-  const hasCoords = Number.isFinite(v.latitude) && Number.isFinite(v.longitude)
 
   const persist = async (activate) => {
     setBusy(true)
     setMsg(null)
     try {
-      await updateMerchantLegal(merchant.id, v)
-      await updateMerchantLocation(merchant.id, v)
-      let p = await saveProgram(merchant.id, program, v)
+      let p = await saveNew(v)
       if (activate && p.status !== 'active') p = await activateProgram(p.id)
       if (p.status === 'active') syncWalletCard() // nombre/color/logo a los pases ya guardados
       await refresh()
@@ -256,13 +190,9 @@ function CardConfigPage({ program }) {
       const text =
         err?.code === 'plan_limit'
           ? 'Has llegado al límite de tarjetas de tu plan. Archiva otra o mejora tu plan.'
-          : err?.code === 'code_taken'
-            ? 'Ya tienes otra tarjeta con ese código de enlace. Elige otro.'
-            : err?.code === 'code_locked'
-              ? 'El código del enlace no se puede cambiar en una tarjeta activa.'
-              : err?.code === 'forbidden'
-                ? 'No tienes permiso para activar esta tarjeta.'
-                : 'No hemos podido guardar los cambios. Tus datos siguen aquí; inténtalo de nuevo.'
+          : err?.code === 'forbidden'
+            ? 'No tienes permiso para activar esta tarjeta.'
+            : 'No hemos podido guardar los cambios. Tus datos siguen aquí; inténtalo de nuevo.'
       setMsg({ tone: 'error', text })
     } finally {
       setBusy(false)
@@ -271,7 +201,7 @@ function CardConfigPage({ program }) {
   }
 
   const attempt = (activate) => {
-    const errs = validate(v, activate, showCode && codeEditable)
+    const errs = validate(v)
     setErrors(errs)
     const first = Object.keys(errs)[0]
     if (first) {
@@ -279,6 +209,7 @@ function CardConfigPage({ program }) {
       setMsg({ tone: 'error', text: 'Revisa los campos marcados.' })
       return
     }
+    if (activate && !active && !legalReady) return setMsg({ tone: 'error', account: true })
     if (activate && !active) return setConfirm('activate')
     if (active && program.threshold !== v.threshold) return setConfirm('threshold')
     persist(activate)
@@ -317,6 +248,15 @@ function CardConfigPage({ program }) {
           Configura tu tarjeta para empezar. Solo te llevará un par de minutos.
         </Alert>
       )}
+      {!active && !legalReady && (
+        <Alert tone="info" className="mb-4">
+          Antes de activar necesitarás tus datos legales.{' '}
+          <Link to="/app/cuenta" className="font-semibold underline">
+            Complétalos en Cuenta
+          </Link>{' '}
+          (solo una vez para todas tus tarjetas).
+        </Alert>
+      )}
       <div className="lg:grid lg:grid-cols-[3fr_2fr] lg:gap-8">
         <details className="mb-4 rounded-card border border-border-subtle p-3 lg:hidden">
           <summary className="min-h-[44px] cursor-pointer py-2 font-medium">
@@ -336,7 +276,7 @@ function CardConfigPage({ program }) {
           className="space-y-8"
         >
           <fieldset className="space-y-4">
-            <legend className="mb-2 text-lg font-semibold">1. Datos del negocio</legend>
+            <legend className="mb-2 text-lg font-semibold">1. Datos de la tarjeta</legend>
             <TextField
               name="card_name"
               label="Nombre en la tarjeta"
@@ -346,26 +286,6 @@ function CardConfigPage({ program }) {
               error={errors.card_name}
               maxLength={30}
             />
-            {showCode && (
-              <TextField
-                name="code"
-                label="Código del enlace"
-                required={codeEditable}
-                value={v.code}
-                readOnly={!codeEditable}
-                onChange={(e) => {
-                  setCodeTouched(true)
-                  set('code', e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))
-                }}
-                error={errors.code}
-                maxLength={24}
-                help={
-                  codeEditable
-                    ? `Identifica esta tarjeta en su QR y enlace: …/c/${merchant.slug}?card=${v.code || 'codigo'}. No se puede cambiar después de activarla.`
-                    : `Va en el QR y el enlace de esta tarjeta (…/c/${merchant.slug}?card=${v.code}). No se puede cambiar.`
-                }
-              />
-            )}
             <div>
               <p className="mb-1.5 text-sm font-medium">Logo</p>
               <div className="flex items-center gap-3">
@@ -457,52 +377,6 @@ function CardConfigPage({ program }) {
               {lowContrast && (
                 <p role="status" className="mt-1 text-sm text-warning">
                   Este color es muy claro y se leerá mal. Hemos ajustado el texto a negro.
-                </p>
-              )}
-            </div>
-            <div>
-              <TextField
-                name="address"
-                label="Dirección del negocio (opcional)"
-                placeholder="Calle Mayor 12, 28013 Madrid"
-                value={v.address}
-                onChange={(e) => {
-                  set('address', e.target.value)
-                  if (hasCoords) setCoords(null, null) // coordenadas viejas ya no valen
-                  setGeo({ busy: false, text: '', tone: 'muted' })
-                }}
-                error={errors.address}
-                autoComplete="street-address"
-                maxLength={200}
-                help="Tus clientes la verán en su tarjeta con un enlace para llegar."
-              />
-              <div className="mt-2 flex flex-wrap items-center gap-3">
-                <Button variant="secondary" onClick={onGeocode} disabled={geo.busy}>
-                  {geo.busy ? 'Buscando…' : 'Localizar en el mapa'}
-                </Button>
-                <Button variant="link" onClick={onMyLocation} disabled={geo.busy}>
-                  Estoy en el local: usar mi ubicación
-                </Button>
-              </div>
-              {geo.text && (
-                <p
-                  role="status"
-                  className={`mt-1 text-sm ${geo.tone === 'warning' ? 'text-warning' : 'text-text-muted'}`}
-                >
-                  {geo.text}
-                </p>
-              )}
-              {hasCoords && (
-                <p className="mt-1 text-sm text-text-muted">
-                  Ubicación lista.{' '}
-                  <a
-                    href={mapsUrl(v)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="font-medium text-primary underline"
-                  >
-                    Comprobar en Google Maps
-                  </a>
                 </p>
               )}
             </div>
@@ -619,38 +493,19 @@ function CardConfigPage({ program }) {
             />
           </fieldset>
 
-          <fieldset className="space-y-4">
-            <legend className="mb-1 text-lg font-semibold">5. Datos legales</legend>
-            <p className="text-sm text-text-muted">
-              Se muestran a tus clientes como responsable del tratamiento. Obligatorios para
-              activar.
-            </p>
-            <TextField
-              name="legal_name"
-              label="Razón social o nombre del responsable"
-              value={v.legal_name}
-              onChange={(e) => set('legal_name', e.target.value)}
-              error={errors.legal_name}
-              autoComplete="organization"
-            />
-            <TextField
-              label="NIF/CIF (opcional)"
-              value={v.tax_id}
-              onChange={(e) => set('tax_id', e.target.value)}
-            />
-            <TextField
-              name="privacy_email"
-              label="Email de contacto para derechos RGPD"
-              type="email"
-              inputMode="email"
-              value={v.privacy_email}
-              onChange={(e) => set('privacy_email', e.target.value)}
-              error={errors.privacy_email}
-            />
-          </fieldset>
-
           <div className="space-y-3">
-            {msg && <Alert tone={msg.tone}>{msg.text}</Alert>}
+            {msg?.account ? (
+              <Alert tone="error">
+                Para activar la tarjeta completa antes tus datos legales (razón social y email de
+                contacto RGPD) en{' '}
+                <Link to="/app/cuenta" className="font-semibold underline">
+                  Cuenta
+                </Link>
+                . Tu borrador no se pierde: guárdalo primero.
+              </Alert>
+            ) : (
+              msg && <Alert tone={msg.tone}>{msg.text}</Alert>
+            )}
             <div className="flex flex-wrap items-center gap-3">
               {!active ? (
                 <>
