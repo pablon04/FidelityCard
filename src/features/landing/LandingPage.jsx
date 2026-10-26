@@ -28,12 +28,23 @@ const btn =
 const btnPrimary = `${btn} bg-primary text-on-primary hover:bg-primary-hover`
 const btnSecondary = `${btn} border-[1.5px] border-border bg-surface text-text hover:bg-bg-muted`
 
-function Section({ id, title, intro, children, muted }) {
+function Section({ id, title, intro, children, muted, center }) {
   return (
     <section id={id} className={cn('scroll-mt-16 py-16 md:py-24', muted && 'bg-bg-muted')}>
       <div className="mx-auto max-w-6xl px-4 sm:px-5">
-        <h2 className="max-w-2xl text-2xl font-bold md:text-[34px] md:leading-[42px]">{title}</h2>
-        {intro && <p className="mt-3 max-w-2xl text-lg text-text-muted">{intro}</p>}
+        <h2
+          className={cn(
+            'max-w-2xl text-2xl font-bold md:text-[34px] md:leading-[42px]',
+            center && 'mx-auto text-center',
+          )}
+        >
+          {title}
+        </h2>
+        {intro && (
+          <p className={cn('mt-3 max-w-2xl text-lg text-text-muted', center && 'mx-auto text-center')}>
+            {intro}
+          </p>
+        )}
         <div className="mt-10">{children}</div>
       </div>
     </section>
@@ -319,8 +330,8 @@ function Trust() {
 
 function Faq() {
   return (
-    <Section id="faq" title="Preguntas frecuentes" className="items-center content-center justify-center">
-      <div className=" max-w-3xl divide-y divide-border-subtle rounded-card border border-border-subtle">
+    <Section id="faq" title="Preguntas frecuentes" center>
+      <div className="mx-auto max-w-3xl divide-y divide-border-subtle rounded-card border border-border-subtle">
         {FAQ.map((f) => (
           <details key={f.q} className="group p-4">
             <summary className="flex min-h-[44px] cursor-pointer list-none items-center justify-between gap-4 font-semibold [&::-webkit-details-marker]:hidden">
