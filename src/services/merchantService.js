@@ -185,6 +185,7 @@ export async function saveProgram(merchantId, existing, values) {
     card_name: values.card_name.trim(),
     brand_color: values.brand_color,
     logo_path: values.logo_path || null,
+    visit_cooldown_minutes: values.visit_cooldown_minutes,
   }
   // El codigo del enlace solo se fija/cambia en borrador (despues va impreso en QR/NFC).
   if (!existing || existing.status === 'draft') row.code = values.code || null

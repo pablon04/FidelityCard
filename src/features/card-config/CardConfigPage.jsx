@@ -28,6 +28,26 @@ function toCode(name, n = 0) {
   return (base.length < 2 ? `${base}-1` : base) + sfx
 }
 
+// Tiempo minimo entre dos pases de la misma tarjeta (visit_cooldown_minutes, 0..10080).
+const COOLDOWNS = [
+  [0, 'Sin restricción'],
+  [30, '30 minutos'],
+  [60, '1 hora'],
+  [120, '2 horas'],
+  [240, '4 horas'],
+  [480, '8 horas'],
+  [720, '12 horas'],
+  [1440, '24 horas (una vez al día)'],
+  [2880, '2 días'],
+  [4320, '3 días'],
+  [5760, '4 días'],
+  [7200, '5 días'],
+  [8640, '6 días'],
+  [10080, '1 semana'],
+]
+const cooldownLabel = (m) =>
+  COOLDOWNS.find(([k]) => k === m)?.[1] ?? `${m} ${m === 1 ? 'minuto' : 'minutos'}`
+
 function initial(merchant, program, isFirst) {
   const card_name = program?.card_name ?? (isFirst ? merchant.name.slice(0, 30) : '')
   return {
@@ -38,6 +58,7 @@ function initial(merchant, program, isFirst) {
     threshold: program?.threshold ?? 8,
     points_per_visit: Number(program?.points_per_visit ?? 1),
     reward_description: program?.reward_description ?? '',
+    visit_cooldown_minutes: program?.visit_cooldown_minutes ?? 30,
   }
 }
 
@@ -59,6 +80,12 @@ function validate(v) {
     )
       e.points_per_visit = 'Escribe un número entero entre 1 y 1000.'
   }
+  if (
+    !Number.isInteger(v.visit_cooldown_minutes) ||
+    v.visit_cooldown_minutes < 0 ||
+    v.visit_cooldown_minutes > 10080
+  )
+    e.visit_cooldown_minutes = 'Elige un tiempo válido.'
   const r = v.reward_description.trim().length
   if (r < 3 || r > 60)
     e.reward_description = 'Escribe qué recibirá tu cliente (entre 3 y 60 caracteres).'
@@ -491,6 +518,39 @@ function CardConfigPage({ program }) {
               help={`${v.reward_description.trim().length}/60`}
               maxLength={60}
             />
+          </fieldset>
+
+          <fieldset className="space-y-2">
+            <legend className="mb-2 text-lg font-semibold">5. Restricción de uso</legend>
+            <label htmlFor="visit_cooldown_minutes" className="block text-sm font-medium">
+              Tiempo mínimo entre dos pases
+            </label>
+            <select
+              id="visit_cooldown_minutes"
+              name="visit_cooldown_minutes"
+              value={v.visit_cooldown_minutes}
+              onChange={(e) => set('visit_cooldown_minutes', Number(e.target.value))}
+              className="min-h-[48px] rounded-control border-[1.5px] border-border bg-surface px-3 text-base"
+            >
+              {!COOLDOWNS.some(([k]) => k === v.visit_cooldown_minutes) && (
+                <option value={v.visit_cooldown_minutes}>
+                  {cooldownLabel(v.visit_cooldown_minutes)}
+                </option>
+              )}
+              {COOLDOWNS.map(([k, label]) => (
+                <option key={k} value={k}>
+                  {label}
+                </option>
+              ))}
+            </select>
+            <p className="text-sm text-text-muted">
+              Si el cliente pasa la tarjeta por el QR o NFC de caja antes de que pase este tiempo,
+              no suma. Como el premio se canjea al completar la tarjeta, también evita canjes
+              seguidos.
+            </p>
+            {errors.visit_cooldown_minutes && (
+              <p className="text-sm font-medium text-danger">⚠ {errors.visit_cooldown_minutes}</p>
+            )}
           </fieldset>
 
           <div className="space-y-3">
