@@ -200,7 +200,7 @@ function Plans() {
     <Section
       id="planes"
       title="Planes sencillos, clientes ilimitados"
-      intro="Todos los planes incluyen clientes ilimitados, pase web, Google Wallet, Apple Wallet y antifraude. Precios sin IVA."
+      intro="Todos los planes incluyen clientes ilimitados, pase web, Google Wallet, Apple Wallet y Soporte por Whatsapp."
     >
       <div
         role="group"
@@ -281,7 +281,7 @@ function Plans() {
       </ul>
 
       <p className="mt-6 text-xs text-text-muted">
-        * Envíos ilimitados sujetos a un uso razonable. Precios sin IVA.
+        * Envíos ilimitados sujetos a un uso razonable.
       </p>
     </Section>
   )
@@ -319,8 +319,8 @@ function Trust() {
 
 function Faq() {
   return (
-    <Section id="faq" title="Preguntas frecuentes">
-      <div className="max-w-3xl divide-y divide-border-subtle rounded-card border border-border-subtle">
+    <Section id="faq" title="Preguntas frecuentes" className="items-center content-center justify-center">
+      <div className=" max-w-3xl divide-y divide-border-subtle rounded-card border border-border-subtle">
         {FAQ.map((f) => (
           <details key={f.q} className="group p-4">
             <summary className="flex min-h-[44px] cursor-pointer list-none items-center justify-between gap-4 font-semibold [&::-webkit-details-marker]:hidden">
