@@ -80,7 +80,7 @@ function ActionCode({ id, title, help, url, card, slug, file }) {
               Descargar QR (PNG)
             </Button>
             <Button variant="secondary" onClick={() => dl('svg')}>
-              Descargar (SVG)
+              Descargar QR (SVG)
             </Button>
           </div>
         </div>
