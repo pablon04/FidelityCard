@@ -37,7 +37,7 @@ const COOLDOWNS = [
   [240, '4 horas'],
   [480, '8 horas'],
   [720, '12 horas'],
-  [1440, '24 horas (una vez al día)'],
+  [1440, '24 horas'],
   [2880, '2 días'],
   [4320, '3 días'],
   [5760, '4 días'],
