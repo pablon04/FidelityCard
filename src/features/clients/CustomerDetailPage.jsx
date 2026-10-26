@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Pencil } from 'lucide-react'
 import { Link, useParams } from 'react-router'
 import { Alert } from '../../components/ui/Alert.jsx'
 import { Button } from '../../components/ui/Button.jsx'
 import { Sheet } from '../../components/ui/Sheet.jsx'
 import { Skeleton } from '../../components/ui/Skeleton.jsx'
 import { PhoneField } from '../../components/ui/PhoneField.jsx'
+import { TextField } from '../../components/ui/TextField.jsx'
 import { dialOf, normalizePhone, splitE164, stripDialPrefix } from '../../lib/phone.js'
-import { getCustomerDetail, updateCustomerPhone } from '../../services/customersService.js'
+import { getCustomerDetail, updateCustomerContact } from '../../services/customersService.js'
 import { useMerchant } from '../merchant/merchantCtx.js'
 
 const fmtDateTime = (iso) =>
@@ -29,68 +31,99 @@ function Field({ label, children }) {
   )
 }
 
-const PHONE_ERRORS = {
-  phone_taken: 'Ese teléfono ya lo tiene otro cliente de tu comercio.',
-  invalid_phone: 'Revisa el teléfono.',
-  forbidden: 'No tienes permiso para cambiar este cliente.',
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
+
+const CONTACT_ERRORS = {
+  email_taken: { email: 'Ese email ya lo tiene otro cliente de tu comercio.' },
+  phone_taken: { phone: 'Ese teléfono ya lo tiene otro cliente de tu comercio.' },
+  invalid_email: { email: 'Revisa el email.' },
+  invalid_phone: { phone: 'Revisa el teléfono.' },
+  forbidden: { form: 'No tienes permiso para cambiar este cliente.' },
 }
 
-/** Dialogo para cambiar el telefono (cliente que cambio de numero). */
-function PhoneDialog({ open, customer, onClose, onSaved }) {
+/** Dialogo para editar email y telefono (cliente que cambio de correo o de numero). */
+function ContactDialog({ open, customer, onClose, onSaved }) {
+  const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [country, setCountry] = useState('ES')
-  const [error, setError] = useState('')
+  const [errors, setErrors] = useState({})
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
     if (!open) return
     const cur = splitE164(customer.phone)
     // eslint-disable-next-line react-hooks/set-state-in-effect
+    setEmail(customer.email)
     setCountry(cur.country)
     setPhone(cur.number)
-    setError('')
-  }, [open, customer.phone])
+    setErrors({})
+  }, [open, customer.email, customer.phone])
 
   const save = async (e) => {
     e.preventDefault()
+    const mail = email.trim().toLowerCase()
     const e164 = normalizePhone(phone, dialOf(country))
-    if (!e164) return setError('Escribe un teléfono válido.')
-    if (e164 === customer.phone) return onClose()
+    const errs = {}
+    if (!EMAIL_RE.test(mail)) errs.email = 'Escribe un email válido.'
+    if (!e164) errs.phone = 'Escribe un teléfono válido.'
+    setErrors(errs)
+    if (errs.email || errs.phone) return
+    if (mail === customer.email && e164 === customer.phone) return onClose()
     setBusy(true)
-    setError('')
     try {
-      onSaved(await updateCustomerPhone(customer.id, e164))
+      onSaved(await updateCustomerContact(customer.id, mail, e164))
     } catch (err) {
-      setError(PHONE_ERRORS[err.code] ?? 'No hemos podido guardar el teléfono. Inténtalo de nuevo.')
+      setErrors(
+        CONTACT_ERRORS[err.code] ?? {
+          form: 'No hemos podido guardar los cambios. Inténtalo de nuevo.',
+        },
+      )
     } finally {
       setBusy(false)
     }
   }
 
+  const clear = (k) => setErrors((p) => ({ ...p, [k]: undefined, form: undefined }))
+
   return (
-    <Sheet variant="dialog" open={open} onClose={onClose} title="Cambiar teléfono">
+    <Sheet variant="dialog" open={open} onClose={onClose} title="Editar datos de contacto">
       <form onSubmit={save} noValidate className="space-y-4">
         <p className="text-sm text-text-muted">
-          Úsalo si {customer.name} ha cambiado de número. Con el nuevo teléfono y su email podrá
-          recuperar su tarjeta en otro móvil.
+          Úsalo si {customer.name} ha cambiado de correo o de número. Con el email y el teléfono
+          nuevos podrá recuperar su tarjeta en otro móvil.
         </p>
+        <TextField
+          label="Email"
+          required
+          name="email"
+          type="email"
+          inputMode="email"
+          autoComplete="off"
+          value={email}
+          onChange={(e) => {
+            setEmail(e.target.value)
+            clear('email')
+          }}
+          error={errors.email}
+        />
         <PhoneField
-          label="Nuevo teléfono"
+          label="Teléfono"
           required
           name="phone"
           autoComplete="off"
           country={country}
           onCountryChange={(c) => {
             setCountry(c)
-            setError('')
+            clear('phone')
           }}
           value={phone}
           onChange={(e) => {
             setPhone(stripDialPrefix(e.target.value, dialOf(country)))
-            setError('')
+            clear('phone')
           }}
-          error={error}
+          error={errors.phone}
         />
+        {errors.form && <Alert tone="error">{errors.form}</Alert>}
         <div className="flex gap-3">
           <Button type="submit" loading={busy}>
             Guardar
@@ -109,7 +142,7 @@ export default function CustomerDetailPage() {
   const { id } = useParams()
   const { merchant, programs } = useMerchant()
   const [state, setState] = useState({ status: 'loading' })
-  const [editPhone, setEditPhone] = useState(false)
+  const [editing, setEditing] = useState(false)
   const [notice, setNotice] = useState('')
 
   const load = useCallback(() => {
@@ -183,17 +216,18 @@ export default function CustomerDetailPage() {
 
       {notice && <Alert tone="success">{notice}</Alert>}
       <section aria-labelledby="h-data" className="rounded-card border border-border-subtle p-4">
-        <h2 id="h-data" className="sr-only">
-          Datos del cliente
-        </h2>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 id="h-data" className="text-lg font-semibold">
+            Datos del cliente
+          </h2>
+          <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
+            <Pencil aria-hidden="true" size={16} />
+            Editar
+          </Button>
+        </div>
         <dl className="grid gap-4 sm:grid-cols-2">
           <Field label="Email">{c.email}</Field>
-          <Field label="Teléfono">
-            {c.phone}{' '}
-            <Button variant="link" onClick={() => setEditPhone(true)}>
-              Cambiar
-            </Button>
-          </Field>
+          <Field label="Teléfono">{c.phone}</Field>
           <Field label="Registrado el">{fmtDateTime(c.createdAt)}</Field>
           <Field label="Última visita">
             {c.lastVisitAt ? fmtDateTime(c.lastVisitAt) : 'Todavía no ha venido'}
@@ -205,14 +239,14 @@ export default function CustomerDetailPage() {
         </dl>
       </section>
 
-      <PhoneDialog
-        open={editPhone}
+      <ContactDialog
+        open={editing}
         customer={c}
-        onClose={() => setEditPhone(false)}
-        onSaved={(phone) => {
-          setState({ status: 'ready', c: { ...c, phone } })
-          setEditPhone(false)
-          setNotice('Teléfono actualizado.')
+        onClose={() => setEditing(false)}
+        onSaved={({ email, phone }) => {
+          setState({ status: 'ready', c: { ...c, email, phone } })
+          setEditing(false)
+          setNotice('Datos de contacto actualizados.')
         }}
       />
 

@@ -160,3 +160,25 @@ export async function updateCustomerPhone(customerId, phone) {
   }
   return data
 }
+
+/**
+ * Edita email y telefono del cliente (cambio de correo o de numero). Solo owner (SQL 0015).
+ * @returns {Promise<{email:string, phone:string}>}
+ * @throws {Error & {code:'email_taken'|'phone_taken'|'invalid_email'|'invalid_phone'|'forbidden'|'unknown'}}
+ */
+export async function updateCustomerContact(customerId, email, phone) {
+  const { data, error } = await supabase.rpc('update_customer_contact', {
+    p_customer_id: customerId,
+    p_email: email,
+    p_phone_e164: phone,
+  })
+  if (error) {
+    const msg = error.message || ''
+    const code =
+      ['email_taken', 'phone_taken', 'invalid_email', 'invalid_phone'].find((c) =>
+        msg.includes(c),
+      ) ?? (/forbidden_or_not_found/.test(msg) ? 'forbidden' : 'unknown')
+    throw Object.assign(new Error(code), { code })
+  }
+  return data
+}

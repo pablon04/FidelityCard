@@ -102,7 +102,12 @@ export async function countProgramCards(programId) {
 }
 
 /** Crea comercio con slug `nombre-xxxx` (reintenta si colisiona). */
-export async function createMerchant({ name, legalName = null, privacyEmail = null }) {
+export async function createMerchant({
+  name,
+  contactPhone = null,
+  legalName = null,
+  privacyEmail = null,
+}) {
   for (let i = 0; i < 5; i++) {
     const slug = `${slugify(name)}-${randomSuffix(4)}`
     const { error } = await supabase.rpc('create_merchant', {
@@ -111,7 +116,17 @@ export async function createMerchant({ name, legalName = null, privacyEmail = nu
       p_legal_name: legalName,
       p_privacy_email: privacyEmail,
     })
-    if (!error) return slug
+    if (!error) {
+      // El owner puede actualizar su contact_phone (grant de 0013); el comercio ya existe.
+      if (contactPhone) {
+        const { error: e2 } = await supabase
+          .from('merchants')
+          .update({ contact_phone: contactPhone })
+          .eq('slug', slug)
+        if (e2) throw e2
+      }
+      return slug
+    }
     if (error.code !== '23505' || /merchant_already_exists/.test(error.message)) throw error
   }
   throw new Error('slug_collision')

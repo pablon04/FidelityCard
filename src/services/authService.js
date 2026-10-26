@@ -8,11 +8,11 @@ export const onAuthChange = (cb) => {
 }
 
 /** Auth sin confirmacion de email (config Supabase). Si no hay sesion, la confirmacion esta activa. */
-export async function signUp({ email, password, businessName }) {
+export async function signUp({ email, password, businessName, contactPhone }) {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { business_name: businessName } },
+    options: { data: { business_name: businessName, contact_phone: contactPhone } },
   })
   if (error) throw error
   return { session: data.session }
