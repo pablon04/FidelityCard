@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import { createBrowserRouter, Navigate } from 'react-router'
 
 // Code splitting por ruta (ADR-003): la landing /c/:slug no arrastra el panel ni supabase-js.
+const LandingPage = lazy(() => import('../features/landing/LandingPage.jsx'))
 const EnrollPage = lazy(() => import('../features/enroll/EnrollPage.jsx'))
 const PrivacyPage = lazy(() => import('../features/enroll/PrivacyPage.jsx'))
 const PassPage = lazy(() => import('../features/pass/PassPage.jsx'))
@@ -30,7 +31,7 @@ const SharePage = lazy(() => import('../features/share/SharePage.jsx'))
 const lz = (el) => <Suspense fallback={null}>{el}</Suspense>
 
 export const router = createBrowserRouter([
-  { path: '/', element: <Navigate to="/app/login" replace /> },
+  { path: '/', element: lz(<LandingPage />) },
   { path: '/c/:slug', element: lz(<EnrollPage />) },
   { path: '/c/:slug/privacidad', element: lz(<PrivacyPage />) },
   { path: '/p/:token', element: lz(<PassPage />) },
