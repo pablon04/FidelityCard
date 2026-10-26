@@ -97,8 +97,8 @@ export const FEATURES = [
   {
     id: 'wallet',
     title: 'En el móvil del cliente, sin fricción',
-    text: 'Cada cliente recibe un pase web que funciona en cualquier móvil, y puede añadirlo a Google Wallet. Apple Wallet llegará próximamente.',
-    bullets: ['Pase web sin instalar nada', 'Google Wallet', 'Apple Wallet (próximamente)'],
+    text: 'Cada cliente recibe un pase web que funciona en cualquier móvil, y puede añadirlo a Google Wallet o a Apple Wallet.',
+    bullets: ['Pase web sin instalar nada', 'Google Wallet', 'Apple Wallet'],
   },
   {
     id: 'clients',
@@ -127,7 +127,7 @@ export const FEATURES = [
 export const FAQ = [
   {
     q: '¿Mis clientes tienen que instalar una app?',
-    a: 'No. Entran desde el móvil acercándolo a la pegatina NFC o escaneando el QR, se dan de alta en unos segundos y reciben un pase web. Si quieren, lo añaden a Google Wallet.',
+    a: 'No. Entran desde el móvil acercándolo a la pegatina NFC o escaneando el QR, se dan de alta en unos segundos y reciben un pase web. Si quieren, lo añaden a Google Wallet o Apple Wallet.',
   },
   {
     q: '¿Necesitan crear una cuenta o una contraseña?',

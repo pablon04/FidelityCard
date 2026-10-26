@@ -98,7 +98,7 @@ function Hero() {
             </a>
           </div>
           <ul className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-sm text-text-muted">
-            {['Clientes ilimitados', 'Google Wallet', 'Datos en la UE'].map((t) => (
+            {['Clientes ilimitados', 'Google y Apple Wallet', 'Datos en la UE'].map((t) => (
               <li key={t} className="flex items-center gap-1.5">
                 <Check className="h-4 w-4 text-success" aria-hidden="true" />
                 {t}
@@ -200,7 +200,7 @@ function Plans() {
     <Section
       id="planes"
       title="Planes sencillos, clientes ilimitados"
-      intro="Todos los planes incluyen clientes ilimitados, pase web, Google Wallet y antifraude. Precios sin IVA."
+      intro="Todos los planes incluyen clientes ilimitados, pase web, Google Wallet, Apple Wallet y antifraude. Precios sin IVA."
     >
       <div
         role="group"
@@ -255,7 +255,7 @@ function Plans() {
                 'Clientes ilimitados',
                 'Visitas o puntos',
                 'QR, NFC y código de caja',
-                'Google Wallet y pase web',
+                'Google Wallet, Apple Wallet y pase web',
                 'Ficha de cliente, historial y CSV',
                 p.dashboard,
                 `Promociones: ${p.promos}`,
