@@ -24,3 +24,16 @@ export async function signIn({ email, password }) {
 }
 
 export const signOut = () => supabase.auth.signOut()
+
+/** Envia el enlace de recuperacion; el enlace vuelve a /app/restablecer con sesion de recuperacion. */
+export async function requestPasswordReset(email) {
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${window.location.origin}/app/restablecer`,
+  })
+  if (error) throw error
+}
+
+export async function updatePassword(password) {
+  const { error } = await supabase.auth.updateUser({ password })
+  if (error) throw error
+}

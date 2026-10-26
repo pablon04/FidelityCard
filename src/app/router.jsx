@@ -8,6 +8,8 @@ const PassPage = lazy(() => import('../features/pass/PassPage.jsx'))
 const CardActionPage = lazy(() => import('../features/pass/CardActionPage.jsx'))
 const AppRoot = lazy(() => import('../features/auth/AppRoot.jsx'))
 const LoginPage = lazy(() => import('../features/auth/LoginPage.jsx'))
+const ForgotPasswordPage = lazy(() => import('../features/auth/ForgotPasswordPage.jsx'))
+const ResetPasswordPage = lazy(() => import('../features/auth/ResetPasswordPage.jsx'))
 const RequireAuth = lazy(() => import('../features/auth/RequireAuth.jsx'))
 const DashboardPage = lazy(() => import('../features/panel/DashboardPage.jsx'))
 const AccountPage = lazy(() => import('../features/account/AccountPage.jsx'))
@@ -39,6 +41,8 @@ export const router = createBrowserRouter([
     element: lz(<AppRoot />),
     children: [
       { path: 'login', element: lz(<LoginPage />) },
+      { path: 'recuperar', element: lz(<ForgotPasswordPage />) },
+      { path: 'restablecer', element: lz(<ResetPasswordPage />) },
       {
         element: lz(<RequireAuth />),
         children: [

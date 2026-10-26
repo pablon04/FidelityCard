@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router'
 import { Alert } from '../../components/ui/Alert.jsx'
 import { Button } from '../../components/ui/Button.jsx'
+import { PasswordField } from '../../components/ui/PasswordField.jsx'
 import { TextField } from '../../components/ui/TextField.jsx'
 import { signIn, signUp } from '../../services/authService.js'
 import { createMerchant } from '../../services/merchantService.js'
@@ -18,7 +19,6 @@ export default function LoginPage() {
   // Vuelta a la pagina protegida que pidio el login (p. ej. /admin); solo rutas propias.
   const from = /^\/(app|admin)(\/|$)/.test(loc.state?.from ?? '') ? loc.state.from : '/app'
   const [f, setF] = useState({ business: '', email: '', password: '' })
-  const [show, setShow] = useState(false)
   const [errors, setErrors] = useState({})
   const [banner, setBanner] = useState(null)
   const [busy, setBusy] = useState(false)
@@ -132,26 +132,25 @@ export default function LoginPage() {
             onChange={set('email')}
             error={errors.email}
           />
-          <TextField
+          <PasswordField
             name="password"
             label="Contraseña"
             required
-            type={show ? 'text' : 'password'}
             autoComplete={register ? 'new-password' : 'current-password'}
             value={f.password}
             onChange={set('password')}
             error={errors.password}
             help={register ? 'Mínimo 8 caracteres' : undefined}
           >
-            <button
-              type="button"
-              aria-pressed={show}
-              onClick={() => setShow((s) => !s)}
-              className="mt-1 min-h-[44px] text-sm font-medium text-primary underline"
-            >
-              {show ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-            </button>
-          </TextField>
+            {!register && (
+              <Link
+                to="/app/recuperar"
+                className="mt-1 inline-flex min-h-[44px] items-center text-sm font-medium text-primary underline"
+              >
+                ¿Has olvidado la contraseña? Cambiar contraseña
+              </Link>
+            )}
+          </PasswordField>
           {banner && <Alert tone={banner.tone}>{banner.text}</Alert>}
           <Button type="submit" size="lg" loading={busy}>
             {register ? 'Crear cuenta' : 'Entrar'}

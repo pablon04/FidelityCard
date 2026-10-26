@@ -18,6 +18,7 @@ export function TextField({
   help,
   required,
   prefix,
+  suffix,
   className,
   inputRef,
   children,
@@ -33,7 +34,7 @@ export function TextField({
         {label}
         {required && <span className="ml-1 font-normal text-text-muted">(obligatorio)</span>}
       </label>
-      <div className="flex">
+      <div className="relative flex">
         {prefix && (
           <span className="flex min-h-[48px] items-center whitespace-nowrap rounded-l-control border-[1.5px] border-r-0 border-border bg-bg-muted px-3 text-base text-text">
             {prefix}
@@ -47,10 +48,12 @@ export function TextField({
           className={cn(
             'min-h-[48px] w-full min-w-0 border-[1.5px] bg-surface px-3 text-base text-text placeholder:text-text-muted read-only:bg-bg-muted',
             prefix ? 'rounded-r-control' : 'rounded-control',
+            suffix && 'pr-12',
             error ? 'border-2 border-danger' : 'border-border',
           )}
           {...input}
         />
+        {suffix && <span className="absolute inset-y-0 right-0 flex items-center">{suffix}</span>}
       </div>
       {help && !error && (
         <p id={helpId} className="mt-1 text-sm text-text-muted">
