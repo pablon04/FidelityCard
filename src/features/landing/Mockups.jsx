@@ -1,4 +1,7 @@
+import { lazy, Suspense } from 'react'
 import { PassCard } from '../../components/ui/PassCard.jsx'
+
+const QrImage = lazy(() => import('../../components/ui/QrImage.jsx'))
 
 /** Marco de teléfono con contenido de ejemplo. Decorativo: lleva aria-hidden o texto alternativo fuera. */
 export function Phone({ children, className = '' }) {
@@ -92,16 +95,17 @@ export function EditorMockup() {
 }
 
 export function ShareMockup() {
-  // Patrón de QR decorativo (no escaneable): evita cargar la librería en la landing.
-  const cells = Array.from({ length: 49 }, (_, i) => ((i * 7 + (i % 5) * 3) % 3 !== 0 ? 1 : 0))
   return (
     <Window title="Compartir">
       <div className="flex items-center gap-4">
-        <div className="grid grid-cols-7 gap-0.5 rounded-control bg-white p-2" aria-hidden="true">
-          {cells.map((c, i) => (
-            <span key={i} className={`h-3.5 w-3.5 ${c ? 'bg-black' : 'bg-white'}`} />
-          ))}
-        </div>
+        <Suspense fallback={<div className="h-[132px] w-[132px] rounded-control bg-white" />}>
+          <QrImage
+            value="https://fidelitycard.example/c/cafe-aurora?s=nfc"
+            size={132}
+            alt=""
+            className="shrink-0 rounded-control"
+          />
+        </Suspense>
         <div className="min-w-0 space-y-2 text-sm">
           <p className="truncate rounded-control bg-bg-muted px-3 py-2 text-text-muted">
             /c/cafe-aurora?s=nfc

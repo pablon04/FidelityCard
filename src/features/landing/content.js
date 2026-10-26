@@ -43,23 +43,6 @@ export const PLANS = [
   },
 ]
 
-/** Filas de la tabla comparativa. Valores: string | true | false. */
-export const COMPARE = [
-  ['Tarjetas activas', '1', '3', '10'],
-  ['Clientes', 'Ilimitados', 'Ilimitados', 'Ilimitados'],
-  ['Tarjetas por visitas o por puntos', true, true, true],
-  ['QR (PNG/SVG), enlace NFC y código de caja', true, true, true],
-  ['Google Wallet', true, true, true],
-  ['Apple Wallet (próximamente)', true, true, true],
-  ['Pase web, sin necesidad de wallet', true, true, true],
-  ['Antifraude por tiempo mínimo entre visitas', true, true, true],
-  ['Ficha de cliente, historial y exportación CSV', true, true, true],
-  ['Dashboard de métricas', 'Básico', 'Completo', 'Completo'],
-  ['Promociones en Wallet (Android e iPhone)', '2 envíos/mes', '8 envíos/mes', 'Ilimitadas*'],
-  ['Segmentación de envíos', false, true, true],
-  ['Kit físico (pegatina NFC + QR impreso)', 'Aparte', '1 incluido', '3 incluidos'],
-]
-
 export const PROBLEMS = [
   {
     icon: 'CreditCard',
@@ -173,13 +156,5 @@ export const FAQ = [
   {
     q: '¿Qué incluye el kit físico?',
     a: 'Una pegatina NFC más un QR impreso listo para colocar en el mostrador. Pro incluye 1 y Premium 3. En Basic se pide aparte.',
-  },
-  {
-    q: '¿Cómo se paga?',
-    a: 'Puedes elegir pago mensual o anual, con 2 meses gratis en el plan anual. Los precios no incluyen IVA.',
-  },
-  {
-    q: '¿Cómo empiezo?',
-    a: 'Crea tu cuenta, cuéntanos los datos de tu negocio y diseña tu tarjeta. Revisamos las altas nuevas antes de activarlas.',
   },
 ]

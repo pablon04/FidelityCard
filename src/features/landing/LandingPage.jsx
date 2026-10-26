@@ -1,25 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
-import {
-  Check,
-  Minus,
-  CreditCard,
-  EyeOff,
-  Smartphone,
-  ShieldAlert,
-  ChevronDown,
-} from 'lucide-react'
+import { Check, CreditCard, EyeOff, Smartphone, ShieldAlert, ChevronDown } from 'lucide-react'
 import { cn } from '../../lib/cn.js'
-import {
-  COMPARE,
-  FAQ,
-  FEATURES,
-  LOGIN_URL,
-  PLANS,
-  PROBLEMS,
-  REGISTER_URL,
-  STEPS,
-} from './content.js'
+import { FAQ, FEATURES, LOGIN_URL, PLANS, PROBLEMS, REGISTER_URL, STEPS } from './content.js'
 import {
   ClientsMockup,
   DashboardMockup,
@@ -297,52 +280,7 @@ function Plans() {
         ))}
       </ul>
 
-      <h3 className="mt-16 text-xl font-bold">Comparativa completa</h3>
-      <div className="mt-4 overflow-x-auto rounded-card border border-border-subtle">
-        <table className="w-full min-w-[620px] text-left text-sm">
-          <caption className="sr-only">Comparativa de planes Basic, Pro y Premium</caption>
-          <thead className="bg-bg-muted">
-            <tr>
-              <th scope="col" className="p-3 font-semibold">
-                Característica
-              </th>
-              {PLANS.map((p) => (
-                <th key={p.id} scope="col" className="p-3 font-semibold">
-                  {p.name}
-                  {p.featured && ' ⭐'}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {COMPARE.map(([label, ...vals]) => (
-              <tr key={label} className="border-t border-border-subtle">
-                <th scope="row" className="p-3 font-medium">
-                  {label}
-                </th>
-                {vals.map((v, i) => (
-                  <td key={i} className="p-3">
-                    {v === true ? (
-                      <>
-                        <Check className="h-5 w-5 text-success" aria-hidden="true" />
-                        <span className="sr-only">Incluido</span>
-                      </>
-                    ) : v === false ? (
-                      <>
-                        <Minus className="h-5 w-5 text-text-muted" aria-hidden="true" />
-                        <span className="sr-only">No incluido</span>
-                      </>
-                    ) : (
-                      v
-                    )}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <p className="mt-3 text-xs text-text-muted">
+      <p className="mt-6 text-xs text-text-muted">
         * Envíos ilimitados sujetos a un uso razonable. Precios sin IVA.
       </p>
     </Section>
