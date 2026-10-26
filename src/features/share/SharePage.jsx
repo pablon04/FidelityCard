@@ -141,11 +141,11 @@ export default function SharePage() {
       </div>
       {activeCards.length > 1 && (
         <div>
-          <label htmlFor="share-card" className="mb-1.5 block text-sm font-medium">
+          <label htmlFor="card-picker" className="mb-1.5 block text-sm font-medium">
             Tarjeta
           </label>
           <select
-            id="share-card"
+            id="card-picker"
             value={program.id}
             onChange={(e) => setParams({ card: e.target.value }, { replace: true })}
             className="min-h-[48px] rounded-control border-[1.5px] border-border bg-surface px-3 text-base"
