@@ -80,7 +80,7 @@ function ActionCode({ id, title, help, url, card, slug, file }) {
               Descargar QR (PNG)
             </Button>
             <Button variant="secondary" onClick={() => dl('svg')}>
-              Descargar QR (SVG)
+              Descargar (SVG)
             </Button>
           </div>
         </div>
@@ -211,16 +211,8 @@ export default function SharePage() {
 
       <section aria-labelledby="h-nfc" className="rounded-card border border-border-subtle p-4">
         <h2 id="h-nfc" className="mb-2 text-lg font-semibold">
-          Cómo usar una etiqueta NFC
+          Enlace para etiqueta NFC
         </h2>
-        <ol className="list-decimal space-y-1.5 pl-5">
-          <li>Compra una etiqueta NFC tipo NTAG213 o superior.</li>
-          <li>Instala la app gratuita &quot;NFC Tools&quot; en tu móvil.</li>
-          <li>Elige Escribir, luego Añadir un registro y después URL.</li>
-          <li>Pega el enlace de abajo y pulsa Escribir.</li>
-          <li>Acerca el móvil a la etiqueta para comprobar que se abre tu tarjeta.</li>
-          <li>Opcional: bloquea la etiqueta (solo lectura) para que nadie cambie el enlace.</li>
-        </ol>
         <p className="mt-3 break-all rounded-control bg-bg-muted p-2 text-sm">{urlNfc}</p>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <CopyButton text={urlNfc} label="Copiar enlace NFC" />
