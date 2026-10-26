@@ -15,6 +15,8 @@ const MESSAGES = {
   invalid_token: 'Enlace de pase no valido.',
   not_found: 'No encontramos este pase.',
   unauthorized: 'Sesion no valida.',
+  invalid_code: 'Codigo incorrecto o caducado.',
+  weak_password: 'La contrasena no es valida. Prueba con otra mas larga.',
   internal: 'Error interno. Intentalo mas tarde.',
 }
 

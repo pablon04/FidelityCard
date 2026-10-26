@@ -8,6 +8,7 @@ import { VisitsChart } from '../../components/ui/VisitsChart.jsx'
 import { mapsUrl } from '../../lib/format.js'
 import {
   REQUEST_STATUS,
+  createPasswordReset,
   getMerchant,
   setApproval,
   setPlan,
@@ -37,6 +38,7 @@ export default function AdminMerchantDetail() {
   const [plan, setPlanSel] = useState('')
   const [busy, setBusy] = useState('')
   const [msg, setMsg] = useState(null)
+  const [reset, setReset] = useState(null)
 
   const load = useCallback(() => {
     getMerchant(id)
@@ -63,6 +65,18 @@ export default function AdminMerchantDetail() {
       setMsg({ tone: 'success', text: ok })
     } catch {
       setMsg({ tone: 'error', text: 'No se ha podido guardar. Inténtalo de nuevo.' })
+    } finally {
+      setBusy('')
+    }
+  }
+
+  const genReset = async () => {
+    setBusy('reset')
+    setReset(null)
+    try {
+      setReset(await createPasswordReset(id))
+    } catch {
+      setMsg({ tone: 'error', text: 'No se ha podido generar el código. Inténtalo de nuevo.' })
     } finally {
       setBusy('')
     }
@@ -138,6 +152,31 @@ export default function AdminMerchantDetail() {
           <p className="mt-2 text-sm text-text-muted">
             Retirar el acceso bloquea su panel y deja de admitir altas y visitas en sus tarjetas.
           </p>
+        )}
+      </section>
+
+      <section className="rounded-card border border-border-subtle bg-surface p-4">
+        <h2 className="mb-1 text-lg font-semibold">Restablecer contraseña</h2>
+        <p className="mb-3 text-sm text-text-muted">
+          Genera un código de un solo uso (10 minutos) y pásaselo al comercio. Lo introduce en «¿Has
+          olvidado la contraseña?» junto a su email. Un código nuevo anula el anterior.
+        </p>
+        <Button variant="secondary" loading={busy === 'reset'} onClick={genReset}>
+          Generar código
+        </Button>
+        {reset && (
+          <div className="mt-3 rounded-control border-2 border-primary p-3" role="status">
+            <p className="text-sm text-text-muted">Código para {reset.email}</p>
+            <p className="select-all font-mono text-3xl font-bold tracking-widest">{reset.code}</p>
+            <p className="text-sm text-text-muted">
+              Caduca a las{' '}
+              {new Date(reset.expires_at).toLocaleTimeString('es-ES', {
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+              . No se vuelve a mostrar.
+            </p>
+          </div>
         )}
       </section>
 

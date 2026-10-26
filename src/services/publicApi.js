@@ -171,3 +171,28 @@ export async function recoverCard(payload) {
     fields: err.fields,
   })
 }
+
+/**
+ * Cambio de contraseña con el código que da el equipo: Edge Function reset-password.
+ * action 'verify' comprueba email+código; 'reset' lo canjea y fija la contraseña.
+ * Errores {error:{code}}: invalid_code(400), validation_error(400), rate_limited(429), internal(500).
+ */
+export async function resetPasswordWithCode({ action, email, code, password }) {
+  const res = await request(`${env.supabaseUrl}/functions/v1/reset-password`, {
+    method: 'POST',
+    headers: baseHeaders(),
+    body: JSON.stringify({ action, email, code, ...(password && { password }) }),
+  })
+  let body = null
+  try {
+    body = await res.json()
+  } catch {
+    /* no JSON */
+  }
+  if (res.ok && body?.ok === true) return
+  const err = body?.error ?? {}
+  throw new ApiError(err.code || 'internal', {
+    status: res.status,
+    retryAfter: (err.retry_after ?? Number(res.headers.get('retry-after'))) || undefined,
+  })
+}
